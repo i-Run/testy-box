@@ -1,4 +1,4 @@
-package com.irun.nora.test.mongo;
+package fr.irun.test.mongo;
 
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
@@ -90,7 +90,7 @@ public class WithEmbeddedMongo extends ExternalResource {
     }
 
     /**
-     * Give the reactive spring template for Mong DB
+     * Give the reactive spring template for Mongo DB
      *
      * @return An async template
      */

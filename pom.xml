@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.irun.nora</groupId>
+        <groupId>fr.irun</groupId>
         <artifactId>nora-parent</artifactId>
         <version>1-SNAPSHOT</version>
     </parent>
