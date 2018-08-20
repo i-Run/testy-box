@@ -17,13 +17,15 @@ import de.flapdoodle.embed.process.config.io.ProcessOutput;
 import de.flapdoodle.embed.process.io.Processors;
 import de.flapdoodle.embed.process.io.Slf4jLevel;
 import de.flapdoodle.embed.process.runtime.Network;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
+import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 
 import java.net.InetAddress;
-import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Allow to launch en Embedded Mongo DB
@@ -35,23 +37,36 @@ import java.util.Objects;
  *
  * @see <a href="https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo">flapdoodle</a>
  */
-public class WithEmbeddedMongo extends ExternalResource {
+public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback, ParameterResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithEmbeddedMongo.class);
 
-    private final String databaseName;
+    private static final String MONGOD = "mongod";
+    private static final String MONGO_EXE = "mongoExe";
+    private static final String MONGO_CLIENT = "mongoClient";
+    private static final String REACTIVE_MONGO_TEMPLATE = "reactiveMongoTemplate";
+    private static final String MONGO_DB_NAME = "mongoDbName";
 
-    private MongodExecutable mongodExe;
-    private MongodProcess mongod;
-    private MongoClient mongo;
-    private ReactiveMongoTemplate mongoTemplate;
+    @Override
+    public void afterEach(ExtensionContext context) {
+        Store store = getStore(context);
+        MongoClient mongo = store.get(MONGO_CLIENT, MongoClient.class);
+        if (mongo != null) {
+            mongo.close();
+        }
 
-    public WithEmbeddedMongo(String databaseName) {
-        this.databaseName = Objects.requireNonNull(databaseName);
+        MongodProcess mongod = store.get(MONGOD, MongodProcess.class);
+        if (mongod != null) {
+            mongod.stop();
+        }
+
+        MongodExecutable mongodExe = store.get(MONGO_EXE, MongodExecutable.class);
+        if (mongodExe != null)
+            mongodExe.stop();
     }
 
     @Override
-    protected void before() throws Throwable {
-        super.before();
+    public void beforeEach(ExtensionContext context) throws Exception {
+        String databaseName = UUID.randomUUID().toString();
 
         int freeServerPort = Network.getFreeServerPort(InetAddress.getLoopbackAddress());
         IMongodConfig mongoConfig = new MongodConfigBuilder()
@@ -69,46 +84,43 @@ public class WithEmbeddedMongo extends ExternalResource {
 
         MongodStarter runtime = MongodStarter.getInstance(runtimeConfig);
 
-        mongodExe = runtime.prepare(mongoConfig);
-        mongod = mongodExe.start();
+        MongodExecutable mongodExe = runtime.prepare(mongoConfig);
+        MongodProcess mongod = mongodExe.start();
 
-        mongo = MongoClients.create(String.format("mongodb://%s:%d/%s",
+        MongoClient mongo = MongoClients.create(String.format("mongodb://%s:%d/%s",
                 mongoConfig.net().getServerAddress().getHostAddress(),
                 mongoConfig.net().getPort(),
                 databaseName));
 
-        mongoTemplate = new ReactiveMongoTemplate(new MongoClientImpl(mongo), databaseName);
-    }
+        ReactiveMongoTemplate mongoTemplate = new ReactiveMongoTemplate(new MongoClientImpl(mongo), databaseName);
 
-    /**
-     * Give the Async client for embedded database
-     *
-     * @return an Async client
-     */
-    public MongoClient getMongoClient() {
-        return mongo;
-    }
-
-    /**
-     * Give the reactive spring template for Mongo DB
-     *
-     * @return An async template
-     */
-    public ReactiveMongoTemplate getMongoTemplate() {
-        return mongoTemplate;
+        Store store = getStore(context);
+        store.put(MONGO_DB_NAME, databaseName);
+        store.put(MONGO_EXE, mongodExe);
+        store.put(MONGOD, mongod);
+        store.put(MONGO_CLIENT, mongo);
+        store.put(REACTIVE_MONGO_TEMPLATE, mongoTemplate);
     }
 
     @Override
-    protected void after() {
-        if (mongo != null) {
-            mongo.close();
-        }
-        if (mongod != null) {
-            mongod.stop();
-        }
-        if (mongodExe != null)
-            mongodExe.stop();
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        Class<?> type = parameterContext.getParameter().getType();
+        return type.equals(MongoClient.class) || type.equals(ReactiveMongoTemplate.class);
+    }
 
-        super.after();
+    @Override
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+        Class<?> type = parameterContext.getParameter().getType();
+        if (type.equals(MongoClient.class)) {
+            return getStore(extensionContext).get(MONGO_CLIENT);
+        } else if (type.equals(ReactiveMongoTemplate.class)) {
+            return getStore(extensionContext).get(REACTIVE_MONGO_TEMPLATE);
+        }
+
+        return null;
+    }
+
+    private Store getStore(ExtensionContext context) {
+        return context.getStore(Namespace.create(getClass(), context.getRequiredTestMethod()));
     }
 }

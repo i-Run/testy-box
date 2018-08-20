@@ -7,7 +7,7 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>nora-parent</artifactId>
-        <version>1</version>
+        <version>3-SNAPSHOT</version>
     </parent>
 
     <artifactId>nora-test-tools</artifactId>
