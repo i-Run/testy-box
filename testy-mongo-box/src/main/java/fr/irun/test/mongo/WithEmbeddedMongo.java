@@ -1,5 +1,6 @@
 package fr.irun.test.mongo;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.reactivestreams.client.internal.MongoClientImpl;
@@ -17,12 +18,16 @@ import de.flapdoodle.embed.process.config.io.ProcessOutput;
 import de.flapdoodle.embed.process.io.Processors;
 import de.flapdoodle.embed.process.io.Slf4jLevel;
 import de.flapdoodle.embed.process.runtime.Network;
+import fr.irun.hexamon.mongo.EntityMongoClient;
+import fr.irun.hexamon.mongo.components.MongoClientWrapper;
 import org.junit.jupiter.api.extension.*;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory;
 
 import java.net.InetAddress;
 import java.util.UUID;
@@ -40,11 +45,22 @@ import java.util.UUID;
 public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback, ParameterResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithEmbeddedMongo.class);
 
+
     private static final String MONGOD = "mongod";
     private static final String MONGO_EXE = "mongoExe";
     private static final String MONGO_CLIENT = "mongoClient";
-    private static final String REACTIVE_MONGO_TEMPLATE = "reactiveMongoTemplate";
+    private static final String ENTITY_MONGO_CLIENT = "entityMongoClient";
     private static final String MONGO_DB_NAME = "mongoDbName";
+
+    private final ObjectMapper mapper;
+
+    public WithEmbeddedMongo() {
+        this.mapper = new ObjectMapper();
+    }
+
+    public WithEmbeddedMongo(ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
 
     @Override
     public void afterEach(ExtensionContext context) {
@@ -92,14 +108,15 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
                 mongoConfig.net().getPort(),
                 databaseName));
 
-        ReactiveMongoTemplate mongoTemplate = new ReactiveMongoTemplate(new MongoClientImpl(mongo), databaseName);
+        ReactiveMongoDatabaseFactory reactiveMongoDatabaseFactory = new SimpleReactiveMongoDatabaseFactory(new MongoClientImpl(mongo), databaseName);
+        EntityMongoClient mongoTemplate = new MongoClientWrapper(reactiveMongoDatabaseFactory, mapper);
 
         Store store = getStore(context);
         store.put(MONGO_DB_NAME, databaseName);
         store.put(MONGO_EXE, mongodExe);
         store.put(MONGOD, mongod);
         store.put(MONGO_CLIENT, mongo);
-        store.put(REACTIVE_MONGO_TEMPLATE, mongoTemplate);
+        store.put(ENTITY_MONGO_CLIENT, mongoTemplate);
     }
 
     @Override
@@ -114,7 +131,7 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
         if (type.equals(MongoClient.class)) {
             return getStore(extensionContext).get(MONGO_CLIENT);
         } else if (type.equals(ReactiveMongoTemplate.class)) {
-            return getStore(extensionContext).get(REACTIVE_MONGO_TEMPLATE);
+            return getStore(extensionContext).get(ENTITY_MONGO_CLIENT);
         }
 
         return null;

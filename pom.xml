@@ -3,19 +3,20 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>nora-parent</artifactId>
         <version>3-SNAPSHOT</version>
     </parent>
 
-    <artifactId>nora-test-tools</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <artifactId>testy-box</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
-        <module>nora-mongo-test</module>
+        <module>testy-mongo-box</module>
+        <module>testy-core-box</module>
+        <module>testy-jooq-box</module>
     </modules>
 
     <dependencyManagement>
@@ -24,6 +25,11 @@
                 <groupId>de.flapdoodle.embed</groupId>
                 <artifactId>de.flapdoodle.embed.mongo</artifactId>
                 <version>2.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+                <version>1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
