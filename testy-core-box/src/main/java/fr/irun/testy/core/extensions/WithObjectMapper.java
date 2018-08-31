@@ -61,6 +61,10 @@ public class WithObjectMapper implements BeforeEachCallback, ParameterResolver {
         return null;
     }
 
+    public ObjectMapper getObjectMapper(ExtensionContext context) {
+        return getStore(context).get(JACKSON_MAPPER, ObjectMapper.class);
+    }
+
     private ExtensionContext.Store getStore(ExtensionContext context) {
         return context.getStore(ExtensionContext.Namespace.create(getClass(), context.getRequiredTestMethod()));
     }

@@ -1,9 +1,7 @@
 package fr.irun.test.mongo;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mongodb.async.client.MongoClient;
-import com.mongodb.async.client.MongoClients;
-import com.mongodb.reactivestreams.client.internal.MongoClientImpl;
+import com.mongodb.reactivestreams.client.MongoClient;
+import com.mongodb.reactivestreams.client.MongoClients;
 import de.flapdoodle.embed.mongo.Command;
 import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodProcess;
@@ -18,17 +16,15 @@ import de.flapdoodle.embed.process.config.io.ProcessOutput;
 import de.flapdoodle.embed.process.io.Processors;
 import de.flapdoodle.embed.process.io.Slf4jLevel;
 import de.flapdoodle.embed.process.runtime.Network;
-import fr.irun.hexamon.mongo.EntityMongoClient;
-import fr.irun.hexamon.mongo.components.MongoClientWrapper;
 import org.junit.jupiter.api.extension.*;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory;
 
+import java.lang.reflect.Parameter;
 import java.net.InetAddress;
 import java.util.UUID;
 
@@ -38,7 +34,7 @@ import java.util.UUID;
  * The flapdoodle download the expected version of Mongo DB in <code>~/.embedmongo</code> and
  * run a database for the test.
  * <p>
- * From this database, an async {@link MongoClient} is created and a Spring {@link ReactiveMongoTemplate} wrap it.
+ * From this database, an async {@link MongoClient} is created and a Spring {@link ReactiveMongoDatabaseFactory} wrap it.
  *
  * @see <a href="https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo">flapdoodle</a>
  */
@@ -49,41 +45,17 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
     private static final String MONGOD = "mongod";
     private static final String MONGO_EXE = "mongoExe";
     private static final String MONGO_CLIENT = "mongoClient";
-    private static final String ENTITY_MONGO_CLIENT = "entityMongoClient";
+    private static final String MONGO_FACTORY = "reactiveMongoFactory";
     private static final String MONGO_DB_NAME = "mongoDbName";
 
-    private final ObjectMapper mapper;
+    private final String databaseName;
 
     public WithEmbeddedMongo() {
-        this.mapper = new ObjectMapper();
-    }
-
-    public WithEmbeddedMongo(ObjectMapper mapper) {
-        this.mapper = mapper;
-    }
-
-    @Override
-    public void afterEach(ExtensionContext context) {
-        Store store = getStore(context);
-        MongoClient mongo = store.get(MONGO_CLIENT, MongoClient.class);
-        if (mongo != null) {
-            mongo.close();
-        }
-
-        MongodProcess mongod = store.get(MONGOD, MongodProcess.class);
-        if (mongod != null) {
-            mongod.stop();
-        }
-
-        MongodExecutable mongodExe = store.get(MONGO_EXE, MongodExecutable.class);
-        if (mongodExe != null)
-            mongodExe.stop();
+        this.databaseName = UUID.randomUUID().toString();
     }
 
     @Override
     public void beforeEach(ExtensionContext context) throws Exception {
-        String databaseName = UUID.randomUUID().toString();
-
         int freeServerPort = Network.getFreeServerPort(InetAddress.getLoopbackAddress());
         IMongodConfig mongoConfig = new MongodConfigBuilder()
                 .net(new Net(InetAddress.getLoopbackAddress().getHostAddress(), freeServerPort, false))
@@ -108,30 +80,52 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
                 mongoConfig.net().getPort(),
                 databaseName));
 
-        ReactiveMongoDatabaseFactory reactiveMongoDatabaseFactory = new SimpleReactiveMongoDatabaseFactory(new MongoClientImpl(mongo), databaseName);
-        EntityMongoClient mongoTemplate = new MongoClientWrapper(reactiveMongoDatabaseFactory, mapper);
+        ReactiveMongoDatabaseFactory mongoFactory = new SimpleReactiveMongoDatabaseFactory(mongo, databaseName);
 
         Store store = getStore(context);
         store.put(MONGO_DB_NAME, databaseName);
         store.put(MONGO_EXE, mongodExe);
         store.put(MONGOD, mongod);
         store.put(MONGO_CLIENT, mongo);
-        store.put(ENTITY_MONGO_CLIENT, mongoTemplate);
+        store.put(MONGO_FACTORY, mongoFactory);
+    }
+
+    @Override
+    public void afterEach(ExtensionContext context) {
+        Store store = getStore(context);
+        MongoClient mongo = store.get(MONGO_CLIENT, MongoClient.class);
+        if (mongo != null) {
+            mongo.close();
+        }
+
+        MongodProcess mongod = store.get(MONGOD, MongodProcess.class);
+        if (mongod != null) {
+            mongod.stop();
+        }
+
+        MongodExecutable mongodExe = store.get(MONGO_EXE, MongodExecutable.class);
+        if (mongodExe != null)
+            mongodExe.stop();
     }
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
-        Class<?> type = parameterContext.getParameter().getType();
-        return type.equals(MongoClient.class) || type.equals(ReactiveMongoTemplate.class);
+        Parameter parameter = parameterContext.getParameter();
+        Class<?> type = parameter.getType();
+        return type.equals(MongoClient.class) || type.equals(ReactiveMongoDatabaseFactory.class) ||
+                (type.equals(String.class) && parameter.isAnnotationPresent(MongoDatabaseName.class));
     }
 
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
-        Class<?> type = parameterContext.getParameter().getType();
+        Parameter parameter = parameterContext.getParameter();
+        Class<?> type = parameter.getType();
         if (type.equals(MongoClient.class)) {
             return getStore(extensionContext).get(MONGO_CLIENT);
-        } else if (type.equals(ReactiveMongoTemplate.class)) {
-            return getStore(extensionContext).get(ENTITY_MONGO_CLIENT);
+        } else if (type.equals(ReactiveMongoDatabaseFactory.class)) {
+            return getStore(extensionContext).get(MONGO_FACTORY);
+        } else if (type.equals(String.class) && parameter.isAnnotationPresent(MongoDatabaseName.class)) {
+            return getStore(extensionContext).get(MONGO_DB_NAME);
         }
 
         return null;
