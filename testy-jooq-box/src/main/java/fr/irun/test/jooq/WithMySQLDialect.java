@@ -1,4 +1,4 @@
-package fr.irun.test.sql;
+package fr.irun.test.jooq;
 
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.extension.*;

@@ -1,4 +1,4 @@
-package fr.irun.test.sql;
+package fr.irun.test.jooq;
 
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
