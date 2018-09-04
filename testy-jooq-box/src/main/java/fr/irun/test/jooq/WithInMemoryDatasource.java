@@ -117,7 +117,8 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         else if (String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class)) {
             return getStore(extensionContext).get(P_CATALOG);
         }
-        return null;
+
+        throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
 
     private static String generateRandomCatalogName() {

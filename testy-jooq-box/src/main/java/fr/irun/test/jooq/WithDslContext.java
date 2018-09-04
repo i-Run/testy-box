@@ -72,7 +72,8 @@ public class WithDslContext implements BeforeAllCallback, ParameterResolver {
         } else if (SQLDialect.class.equals(type)) {
             return getStore(extensionContext).get(P_DSL_DIALECT);
         }
-        return null;
+
+        throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
 
     private Store getStore(ExtensionContext context) {
