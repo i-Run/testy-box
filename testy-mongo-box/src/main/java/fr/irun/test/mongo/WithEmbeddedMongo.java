@@ -109,7 +109,7 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
     }
 
     @Override
-    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Parameter parameter = parameterContext.getParameter();
         Class<?> type = parameter.getType();
         return type.equals(MongoClient.class) || type.equals(ReactiveMongoDatabaseFactory.class) ||
@@ -117,7 +117,7 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
     }
 
     @Override
-    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Parameter parameter = parameterContext.getParameter();
         Class<?> type = parameter.getType();
         if (type.equals(MongoClient.class)) {

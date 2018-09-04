@@ -72,7 +72,8 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         ds.setURL("jdbc:h2:mem:" + catalog + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;INIT=CREATE SCHEMA IF NOT EXISTS " + catalog + "\\; SET SCHEMA " + catalog);
         if (withTcpServer) {
             Server h2TcpServer = Server.createTcpServer("-tcpAllowOthers");
-            LOGGER.info("H2 tcp server started on port: " + h2TcpServer.start().getPort());
+            Server server = h2TcpServer.start();
+            LOGGER.info("H2 tcp server started on port: {}", server.getPort());
             store.put(P_TCP_SERVER, h2TcpServer);
         }
 
@@ -97,7 +98,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     }
 
     @Override
-    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
         if (DataSource.class.equals(type))
             return true;
@@ -108,7 +109,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     }
 
     @Override
-    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
         if (DataSource.class.equals(type))
             return getStore(extensionContext).get(P_DATASOUCE, DataSource.class);
