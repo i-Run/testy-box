@@ -41,7 +41,7 @@ import java.util.UUID;
  * <p>
  * {@see fr.irun.test.jooq.annotations.DbCatalogName}
  */
-public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallback, ParameterResolver {
+public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallback, ParameterResolver, DatasourceExtension {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithInMemoryDatasource.class);
     private static final TimeZone TZ_UTC = TimeZone.getTimeZone("UTC");
 
