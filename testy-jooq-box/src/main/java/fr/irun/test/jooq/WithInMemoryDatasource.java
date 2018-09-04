@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -17,9 +18,13 @@ import java.util.UUID;
  * Allow to create an H2 in-memory database.
  * <p>
  * Usable with {@link ExtendWith} or {@link RegisterExtension}:
- * <pre>
- *
- * </pre>
+ * <pre><code>
+ *     {@literal @}RegisterExtension
+ *     static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder()
+ *             .setCatalog(CATALOG_NAME)
+ *             .wrapTcpServer(true)
+ *             .build();
+ * </code></pre>
  * <p>
  * The default value for the catalog is random UUID. By default the TCP Server was not run.
  * <p>
@@ -38,6 +43,7 @@ import java.util.UUID;
  */
 public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallback, ParameterResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithInMemoryDatasource.class);
+    private static final TimeZone TZ_UTC = TimeZone.getTimeZone("UTC");
 
     private static final String P_DATASOUCE = "datasource";
     private static final String P_TCP_SERVER = "tcpServer";
@@ -46,23 +52,19 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     private final String catalog;
     private final boolean withTcpServer;
 
-    private static final Object mutex = new Object();
-
     public WithInMemoryDatasource() {
-        String uuid = UUID.randomUUID().toString();
-        // H2 does not support schema starting with number ...
-        this.catalog = 'd' + uuid.substring(uuid.lastIndexOf('-') + 1);
+        this.catalog = generateRandomCatalogName();
         this.withTcpServer = false;
     }
 
-    public WithInMemoryDatasource(String catalog, boolean withTcpServer) {
-        this.catalog = catalog;
+    private WithInMemoryDatasource(String catalog, boolean withTcpServer) {
+        this.catalog = Objects.requireNonNull(catalog);
         this.withTcpServer = withTcpServer;
     }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        TimeZone.setDefault(TZ_UTC);
         Store store = getStore(context);
 
         JdbcDataSource ds = new JdbcDataSource();
@@ -76,6 +78,14 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
 
         store.put(P_DATASOUCE, ds);
         store.put(P_CATALOG, catalog);
+    }
+
+    public String getCatalog(ExtensionContext context) {
+        return getStore(context).get(P_CATALOG, String.class);
+    }
+
+    public DataSource getDataSource(ExtensionContext context) {
+        return getStore(context).get(P_DATASOUCE, DataSource.class);
     }
 
     @Override
@@ -110,7 +120,36 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         return null;
     }
 
+    private static String generateRandomCatalogName() {
+        String uuid = UUID.randomUUID().toString();
+        // H2 does not support schema starting with number ...
+        return 'd' + uuid.substring(uuid.lastIndexOf('-') + 1);
+    }
+
     private Store getStore(ExtensionContext context) {
         return context.getStore(Namespace.create(getClass().getName()));
+    }
+
+    public static WithInMemoryDatasourceBuilder builder() {
+        return new WithInMemoryDatasourceBuilder();
+    }
+
+    public static class WithInMemoryDatasourceBuilder {
+        private String catalog = generateRandomCatalogName();
+        private boolean withTcpServer = false;
+
+        public WithInMemoryDatasourceBuilder setCatalog(String catalog) {
+            this.catalog = catalog;
+            return this;
+        }
+
+        public WithInMemoryDatasourceBuilder wrapTcpServer(boolean withTcpServer) {
+            this.withTcpServer = withTcpServer;
+            return this;
+        }
+
+        public WithInMemoryDatasource build() {
+            return new WithInMemoryDatasource(this.catalog, this.withTcpServer);
+        }
     }
 }

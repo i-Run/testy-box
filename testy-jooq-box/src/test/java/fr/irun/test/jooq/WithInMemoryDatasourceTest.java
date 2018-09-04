@@ -2,9 +2,9 @@ package fr.irun.test.jooq;
 
 import fr.irun.test.jooq.annotations.DbCatalogName;
 import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -15,27 +15,47 @@ import java.sql.Statement;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+@ExtendWith(WithInMemoryDatasource.class)
 class WithInMemoryDatasourceTest {
 
-    @Nested
-    @ExtendWith(WithInMemoryDatasource.class)
-    class WithInMemoryDatasourceSimpleTest {
         @Test
         void should_extend_with_datasource(DataSource tested, @DbCatalogName String catalog) {
             assertThat(catalog).isNotNull();
 
-            try (Connection conn = tested.getConnection();
-                 Statement statement = conn.createStatement()) {
+            test_database_aware(tested, catalog);
+        }
 
-                assertThat(conn.getCatalog()).isEqualTo(catalog);
-                assertThat(conn.getSchema()).isEqualTo(catalog);
+    @Nested
+    static class WithInMemoryDatasourceRegisterTest {
+        static final String CATALOG_NAME = "comweb_irun";
 
-                ResultSet resultSet = statement.executeQuery("SELECT 1");
-                assertThat(resultSet).isNotNull();
+        @RegisterExtension
+        static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder()
+                .setCatalog(CATALOG_NAME)
+                .wrapTcpServer(true)
+                .build();
 
-            } catch (SQLException e) {
-                fail(e.getLocalizedMessage(), e);
-            }
+        @Test
+        void should_register_extension_datasource(DataSource tested, @DbCatalogName String catalog) {
+            assertThat(catalog).isEqualTo(CATALOG_NAME);
+
+            test_database_aware(tested, CATALOG_NAME);
+        }
+
+    }
+
+    public static void test_database_aware(DataSource tested, String expectedCatalog) {
+        try (Connection conn = tested.getConnection();
+             Statement statement = conn.createStatement()) {
+
+            assertThat(conn.getCatalog()).isEqualTo(expectedCatalog);
+            assertThat(conn.getSchema()).isEqualTo(expectedCatalog);
+
+            ResultSet resultSet = statement.executeQuery("SELECT 1");
+            assertThat(resultSet).isNotNull();
+
+        } catch (SQLException e) {
+            fail(e.getLocalizedMessage(), e);
         }
     }
 }
