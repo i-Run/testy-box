@@ -81,7 +81,7 @@ public class WithObjectMapper implements BeforeEachCallback, ParameterResolver {
      * <p>
      * Usage :
      * <pre>
-     *     @RegisterExtension
+     *     {@literal @}RegisterExtension
      *     WithObjectMapper wMapper = WithObjectMapper.builder()
      *             .dontFindAndRegisterModules()
      *             .addModule(new ParameterNamesModule())
