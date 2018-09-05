@@ -14,8 +14,7 @@ variables:
 
 cache:
   paths:
-    - "${HOME}/.m2/repository/"
-    - "${HOME}/.embedmongo/"
+    - $HOME/.m2/
 
 test:
   stage: test
