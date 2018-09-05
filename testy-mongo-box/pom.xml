@@ -9,7 +9,7 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>testy-mongo-gox</artifactId>
+    <artifactId>testy-mongo-box</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <dependencies>
