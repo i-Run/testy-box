@@ -1,4 +1,4 @@
-package fr.irun.test.dummy;
+package fr.irun.testy.dummy;
 
 public class Dummy {
     public final String foo;

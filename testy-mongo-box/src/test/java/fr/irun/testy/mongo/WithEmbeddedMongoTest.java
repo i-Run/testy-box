@@ -1,10 +1,11 @@
-package fr.irun.test.mongo;
+package fr.irun.testy.mongo;
 
 import com.google.common.collect.ImmutableMap;
 import com.mongodb.reactivestreams.client.MongoClient;
 import com.mongodb.reactivestreams.client.Success;
+import fr.irun.testy.mongo.MongoDatabaseName;
+import fr.irun.testy.mongo.WithEmbeddedMongo;
 import org.bson.Document;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.Publisher;
@@ -12,7 +13,6 @@ import reactor.core.publisher.Mono;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@Nested
 @ExtendWith(WithEmbeddedMongo.class)
 class WithEmbeddedMongoTest {
     @Test

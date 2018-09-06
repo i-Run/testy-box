@@ -1,4 +1,4 @@
-package fr.irun.test.mongo;
+package fr.irun.testy.mongo;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

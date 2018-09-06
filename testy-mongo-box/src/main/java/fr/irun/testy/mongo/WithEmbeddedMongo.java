@@ -1,4 +1,4 @@
-package fr.irun.test.mongo;
+package fr.irun.testy.mongo;
 
 import com.mongodb.reactivestreams.client.MongoClient;
 import com.mongodb.reactivestreams.client.MongoClients;
@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
 import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory;
 
+import java.io.IOException;
 import java.lang.reflect.Parameter;
 import java.net.InetAddress;
 import java.util.UUID;
@@ -38,15 +39,15 @@ import java.util.UUID;
  *
  * @see <a href="https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo">flapdoodle</a>
  */
-public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback, ParameterResolver {
+public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, ParameterResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithEmbeddedMongo.class);
 
 
-    private static final String MONGOD = "mongod";
-    private static final String MONGO_EXE = "mongoExe";
-    private static final String MONGO_CLIENT = "mongoClient";
-    private static final String MONGO_FACTORY = "reactiveMongoFactory";
-    private static final String MONGO_DB_NAME = "mongoDbName";
+    private static final String P_MONGOD = "mongod";
+    private static final String P_MONGO_EXE = "mongoExe";
+    private static final String P_MONGO_CLIENT = "mongoClient";
+    private static final String P_MONGO_FACTORY = "reactiveMongoFactory";
+    private static final String P_MONGO_DB_NAME = "mongoDbName";
 
     private final String databaseName;
 
@@ -54,8 +55,16 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
         this.databaseName = UUID.randomUUID().toString();
     }
 
+    private WithEmbeddedMongo(String databaseName) {
+        this.databaseName = databaseName;
+    }
+
+    public ReactiveMongoDatabaseFactory getMongoFactory(ExtensionContext context) {
+        return getStore(context).get(P_MONGO_FACTORY, ReactiveMongoDatabaseFactory.class);
+    }
+
     @Override
-    public void beforeEach(ExtensionContext context) throws Exception {
+    public void beforeAll(ExtensionContext context) throws IOException {
         int freeServerPort = Network.getFreeServerPort(InetAddress.getLoopbackAddress());
         IMongodConfig mongoConfig = new MongodConfigBuilder()
                 .net(new Net(InetAddress.getLoopbackAddress().getHostAddress(), freeServerPort, false))
@@ -83,27 +92,27 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
         ReactiveMongoDatabaseFactory mongoFactory = new SimpleReactiveMongoDatabaseFactory(mongo, databaseName);
 
         Store store = getStore(context);
-        store.put(MONGO_DB_NAME, databaseName);
-        store.put(MONGO_EXE, mongodExe);
-        store.put(MONGOD, mongod);
-        store.put(MONGO_CLIENT, mongo);
-        store.put(MONGO_FACTORY, mongoFactory);
+        store.put(P_MONGO_DB_NAME, databaseName);
+        store.put(P_MONGO_EXE, mongodExe);
+        store.put(P_MONGOD, mongod);
+        store.put(P_MONGO_CLIENT, mongo);
+        store.put(P_MONGO_FACTORY, mongoFactory);
     }
 
     @Override
-    public void afterEach(ExtensionContext context) {
+    public void afterAll(ExtensionContext context) {
         Store store = getStore(context);
-        MongoClient mongo = store.get(MONGO_CLIENT, MongoClient.class);
+        MongoClient mongo = store.get(P_MONGO_CLIENT, MongoClient.class);
         if (mongo != null) {
             mongo.close();
         }
 
-        MongodProcess mongod = store.get(MONGOD, MongodProcess.class);
+        MongodProcess mongod = store.get(P_MONGOD, MongodProcess.class);
         if (mongod != null) {
             mongod.stop();
         }
 
-        MongodExecutable mongodExe = store.get(MONGO_EXE, MongodExecutable.class);
+        MongodExecutable mongodExe = store.get(P_MONGO_EXE, MongodExecutable.class);
         if (mongodExe != null)
             mongodExe.stop();
     }
@@ -121,17 +130,34 @@ public class WithEmbeddedMongo implements BeforeEachCallback, AfterEachCallback,
         Parameter parameter = parameterContext.getParameter();
         Class<?> type = parameter.getType();
         if (type.equals(MongoClient.class)) {
-            return getStore(extensionContext).get(MONGO_CLIENT);
+            return getStore(extensionContext).get(P_MONGO_CLIENT);
         } else if (type.equals(ReactiveMongoDatabaseFactory.class)) {
-            return getStore(extensionContext).get(MONGO_FACTORY);
+            return getStore(extensionContext).get(P_MONGO_FACTORY);
         } else if (type.equals(String.class) && parameter.isAnnotationPresent(MongoDatabaseName.class)) {
-            return getStore(extensionContext).get(MONGO_DB_NAME);
+            return getStore(extensionContext).get(P_MONGO_DB_NAME);
         }
 
-        return null;
+        throw new ParameterResolutionException(getClass().getName() + " must be static and package-protected !");
     }
 
     private Store getStore(ExtensionContext context) {
-        return context.getStore(Namespace.create(getClass(), context.getRequiredTestMethod()));
+        return context.getStore(Namespace.create(getClass()));
+    }
+
+    public static WithEmbeddedMongoBuilder builder() {
+        return new WithEmbeddedMongoBuilder();
+    }
+
+    public static final class WithEmbeddedMongoBuilder {
+        private String databaseName = UUID.randomUUID().toString();
+
+        public WithEmbeddedMongoBuilder setDatabaseName(String databaseName) {
+            this.databaseName = databaseName;
+            return this;
+        }
+
+        public WithEmbeddedMongo build() {
+            return new WithEmbeddedMongo(databaseName);
+        }
     }
 }
