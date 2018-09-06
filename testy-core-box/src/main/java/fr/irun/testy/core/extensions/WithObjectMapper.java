@@ -1,6 +1,7 @@
 package fr.irun.testy.core.extensions;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -40,6 +41,7 @@ public class WithObjectMapper implements BeforeAllCallback, BeforeEachCallback, 
             mapper.findAndRegisterModules();
 
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 .registerModules(modules);
 
