@@ -4,10 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.ExtensionContext.Store;
 
 import java.util.*;
 
@@ -20,8 +18,8 @@ import java.util.*;
  * The {@link SerializationFeature#WRITE_DATES_AS_TIMESTAMPS} feature is disable, only no null
  * properties was included in serialization.
  */
-public class WithObjectMapper implements BeforeEachCallback, ParameterResolver {
-    private static final String JACKSON_MAPPER = "jackson-mapper";
+public class WithObjectMapper implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
+    private static final String P_JACKSON_MAPPER = "jackson-mapper";
 
     private final Set<Module> modules = new HashSet<>();
     private final Map<Class<?>, Class<?>> mixins = new HashMap<>();
@@ -36,7 +34,7 @@ public class WithObjectMapper implements BeforeEachCallback, ParameterResolver {
     }
 
     @Override
-    public void beforeEach(ExtensionContext context) {
+    public void beforeAll(ExtensionContext context) {
         ObjectMapper mapper = new ObjectMapper();
         if (findAndRegisterModules)
             mapper.findAndRegisterModules();
@@ -47,8 +45,16 @@ public class WithObjectMapper implements BeforeEachCallback, ParameterResolver {
 
         mixins.forEach(mapper::addMixIn);
 
-        ExtensionContext.Store store = getStore(context);
-        store.put(JACKSON_MAPPER, mapper);
+        Store store = getStore(context);
+        store.put(P_JACKSON_MAPPER, mapper);
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext context) {
+        Store store = getStore(context);
+        Object mapper = store.get(P_JACKSON_MAPPER);
+        if (mapper == null)
+            beforeAll(context);
     }
 
     @Override
@@ -59,17 +65,17 @@ public class WithObjectMapper implements BeforeEachCallback, ParameterResolver {
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         if (ObjectMapper.class.equals(parameterContext.getParameter().getType())) {
-            return getStore(extensionContext).get(JACKSON_MAPPER);
+            return getStore(extensionContext).get(P_JACKSON_MAPPER);
         }
-        return null;
+        throw new ParameterResolutionException("Unable to resolve ObjectMapper !");
     }
 
     public ObjectMapper getObjectMapper(ExtensionContext context) {
-        return getStore(context).get(JACKSON_MAPPER, ObjectMapper.class);
+        return getStore(context).get(P_JACKSON_MAPPER, ObjectMapper.class);
     }
 
-    private ExtensionContext.Store getStore(ExtensionContext context) {
-        return context.getStore(ExtensionContext.Namespace.create(getClass(), context.getRequiredTestMethod()));
+    private Store getStore(ExtensionContext context) {
+        return context.getStore(ExtensionContext.Namespace.create(getClass()));
     }
 
     public static WithObjectMapperBuilder builder() {
@@ -80,7 +86,7 @@ public class WithObjectMapper implements BeforeEachCallback, ParameterResolver {
      * Allow to build a more complex ObjectMapper with {@link Module} and Mixin
      * <p>
      * Usage :
-     * <pre>
+     * <pre style="code">
      *     {@literal @}RegisterExtension
      *     WithObjectMapper wMapper = WithObjectMapper.builder()
      *             .dontFindAndRegisterModules()
