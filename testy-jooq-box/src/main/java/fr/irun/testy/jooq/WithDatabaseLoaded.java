@@ -1,4 +1,4 @@
-package fr.irun.test.jooq;
+package fr.irun.testy.jooq;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.extension.BeforeAllCallback;

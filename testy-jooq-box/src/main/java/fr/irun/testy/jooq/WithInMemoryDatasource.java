@@ -1,6 +1,6 @@
-package fr.irun.test.jooq;
+package fr.irun.testy.jooq;
 
-import fr.irun.test.jooq.annotations.DbCatalogName;
+import fr.irun.testy.jooq.annotations.DbCatalogName;
 import org.h2.jdbcx.JdbcDataSource;
 import org.h2.tools.Server;
 import org.junit.jupiter.api.extension.*;
@@ -39,7 +39,7 @@ import java.util.UUID;
  * <p>
  * For inject the auto-generated catalog name use {@link DbCatalogName} annotation
  * <p>
- * {@see fr.irun.test.jooq.annotations.DbCatalogName}
+ * {@see DbCatalogName}
  */
 public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallback, ParameterResolver, DatasourceExtension {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithInMemoryDatasource.class);

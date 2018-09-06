@@ -1,6 +1,6 @@
-package fr.irun.test.jooq;
+package fr.irun.testy.jooq;
 
-import fr.irun.test.jooq.annotations.DbCatalogName;
+import fr.irun.testy.jooq.annotations.DbCatalogName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
