@@ -38,8 +38,8 @@ import java.util.UUID;
  * </ul>
  * <p>
  * For inject the auto-generated catalog name use {@link DbCatalogName} annotation
- * <p>
- * {@see DbCatalogName}
+ *
+ * @see DbCatalogName
  */
 public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallback, ParameterResolver, DatasourceExtension {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithInMemoryDatasource.class);
