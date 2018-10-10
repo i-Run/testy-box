@@ -79,6 +79,10 @@ public class WithDslContext implements BeforeAllCallback, ParameterResolver {
         throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
 
+    public DSLContext getDslContext(ExtensionContext context) {
+        return getStore(context).get(P_DSL_CONTEXT, DSLContext.class);
+    }
+
     private Store getStore(ExtensionContext context) {
         return context.getStore(Namespace.create(getClass().getName()));
     }

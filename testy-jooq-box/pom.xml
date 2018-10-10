@@ -14,6 +14,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>fr.irun</groupId>
+            <artifactId>testy-core-box</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
         </dependency>
@@ -26,7 +31,6 @@
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
         </dependency>
-
 
         <!--SQL-->
         <dependency>
