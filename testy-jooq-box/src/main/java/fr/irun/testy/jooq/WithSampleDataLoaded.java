@@ -2,8 +2,13 @@ package fr.irun.testy.jooq;
 
 import fr.irun.testy.jooq.model.RelationalDataSet;
 import org.jooq.DSLContext;
+import org.jooq.Query;
+import org.jooq.TableRecord;
 import org.jooq.UpdatableRecord;
+import org.jooq.impl.DSL;
 import org.junit.jupiter.api.extension.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +16,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WithSampleDataLoaded.class);
     private static final String P_TRACKER = "sampleTracker";
 
     private final WithDslContext wDsl;
@@ -40,9 +46,14 @@ public class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallba
             return;
 
         DSLContext dslContext = wDsl.getDslContext(context);
-        dslContext.attach(records);
-        dslContext.batchDelete(records).execute();
-        dslContext.batchStore(records).execute();
+        dslContext.transaction(tx -> {
+            DSLContext txDsl = DSL.using(tx);
+            records.stream().map(TableRecord::getTable).distinct()
+                    .map(txDsl::truncate)
+                    .forEach(Query::execute);
+            records.forEach(r -> r.changed(true));
+            txDsl.batchInsert(records).execute();
+        });
     }
 
     private ExtensionContext.Store getStore(ExtensionContext context) {
@@ -58,7 +69,7 @@ public class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallba
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
         Class<?> type = parameterContext.getParameter().getType();
-        if (DSLContext.class.equals(type))
+        if (Tracker.class.equals(type))
             return getStore(extensionContext).get(P_TRACKER);
 
         throw new NoSuchElementException(P_TRACKER);
