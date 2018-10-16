@@ -32,13 +32,13 @@ maven:test:
   dependencies:
     - maven:build
   script: mvn ${MAVEN_CLI_OPTS} test
-  artifacts:
-    reports:
-      junit: [
-        testy-core-box/target/surefire-reports/TEST-*.xml,
-        testy-jooq-box/target/surefire-reports/TEST-*.xml,
-        testy-mongo-box/target/surefire-reports/TEST-*.xml
-      ]
+#  artifacts:
+#    reports:
+#      junit: [
+#        testy-core-box/target/surefire-reports/TEST-*.xml,
+#        testy-jooq-box/target/surefire-reports/TEST-*.xml,
+#        testy-mongo-box/target/surefire-reports/TEST-*.xml
+#      ]
 
 maven:sonar:
   stage: test
@@ -61,7 +61,7 @@ maven:release:
   dependencies:
     - maven:build
   only:
-    - triggers
+    - web
 
 maven:deploy:
   stage: deploy
