@@ -3,6 +3,7 @@ image: docker.i-run.fr/irun-compiler:20180720.01
 stages:
   - build
   - test
+  - release
   - deploy
   - notify
 
@@ -20,66 +21,53 @@ cache:
 
 maven:build:
   stage: build
-  environment: staging
-  before_script:
-    - cd /tmp/ && git clone git@gitlab.i-run.fr:nora/nora-parent.git && cd nora-parent
-    - git checkout "${CI_COMMIT_REF_NAME}" || true && mvn ${MAVEN_CLI_OPTS} clean install -DskipTests
-    - cd "${CI_PROJECT_DIR}"
-  script:
-    - "mvn ${MAVEN_CLI_OPTS} clean compile"
+  script: mvn ${MAVEN_CLI_OPTS} clean compile
   artifacts:
     when: on_success
-    expire_in: 1 day
-    paths:
-      - testy-core-box/target/
-      - testy-jooq-box/target/
-      - testy-mongo-box/target/
+    expire_in: 1 hour
+    untracked: true
 
-maven:package:
+maven:test:
   stage: test
-  environment: staging
   dependencies:
     - maven:build
-  script: "mvn ${MAVEN_CLI_OPTS} package"
+  script: mvn ${MAVEN_CLI_OPTS} test
   artifacts:
-    when: on_success
-    expire_in: 1 day
-    paths:
-      - testy-core-box/target/
-      - testy-jooq-box/target/
-      - testy-mongo-box/target/
+    reports:
+      junit: [
+        testy-core-box/target/surefire-reports/TEST-*.xml,
+        testy-jooq-box/target/surefire-reports/TEST-*.xml,
+        testy-mongo-box/target/surefire-reports/TEST-*.xml
+      ]
 
 maven:sonar:
   stage: test
-  environment: staging
-  only:
-    - tags
   dependencies:
     - maven:build
-  script: "mvn ${MAVEN_CLI_OPTS} verify sonar:sonar -Psonar"
-  artifacts:
-    when: on_success
-    expire_in: 1 day
-    paths:
-      - testy-core-box/target/
-      - testy-jooq-box/target/
-      - testy-mongo-box/target/
-
-maven:deploy-nexus:
-  stage: deploy
-  environment: staging
+  script: mvn ${MAVEN_CLI_OPTS} verify sonar:sonar -Psonar
   only:
     - tags
+
+maven:release:
+  stage: release
+  script: |
+    mvn ${MAVEN_CLI_OPTS} \
+      release:prepare \
+        -DtagNameFormat="${tagNameFormat}" \
+        -DupdateDependencies=false \
+      release:perform \
+        -Darguments="-DskipTests=true" \
+        -Dmaven.javadoc.skip=true"
   dependencies:
-    - maven:package
-  script: "mvn $MAVEN_CLI_OPTS deploy"
-  artifacts:
-    when: on_success
-    expire_in: 1 day
-    paths:
-      - testy-core-box/target/*.jar
-      - testy-jooq-box/target/*.jar
-      - testy-mongo-box/target/*.jar
+    - maven:build
+  only:
+    - triggers
+
+maven:deploy:
+  stage: deploy
+  dependencies:
+    - maven:build
+  script: mvn ${MAVEN_CLI_OPTS} deploy
 
 slack-feature:
   stage: notify
