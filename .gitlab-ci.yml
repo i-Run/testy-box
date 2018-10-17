@@ -50,14 +50,19 @@ maven:sonar:
 
 maven:release:
   stage: release
+  before_script:
+    - git checkout -B "$CI_BUILD_REF_NAME"
+    - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
+    - git clean -f
   script: |
     mvn ${MAVEN_CLI_OPTS} \
       release:prepare \
-        -DtagNameFormat="${tagNameFormat}" \
+        -DtagNameFormat="@{version}" \
         -DupdateDependencies=false \
+        -DscmCommentPrefix="[maven-release][skip CI] " \
       release:perform \
         -Darguments="-DskipTests=true" \
-        -Dmaven.javadoc.skip=true"
+        -Dmaven.javadoc.skip=true
   dependencies:
     - maven:build
   only:
@@ -69,23 +74,20 @@ maven:deploy:
     - maven:build
   script: mvn ${MAVEN_CLI_OPTS} deploy
 
-slack-feature:
+slack:failure:
   stage: notify
   allow_failure: true
   variables:
     GIT_STRATEGY: none
   script:
-    - curl -s -o "./user-mapping.sh" "https://gitlab.i-run.fr/snippets/2/raw"
-    - curl -s -o "./feature-fail.json" "https://gitlab.i-run.fr/snippets/3/raw"
-    - source "./user-mapping.sh"
-    - |
-      sed -e "s/\${committer}/${USERS[$GITLAB_USER_LOGIN]:-$GITLAB_USER_LOGIN}/g" \
-          -e "s/\${branch}/${CI_COMMIT_REF_NAME}/g" \
-          -e "s/\${commit}/${CI_COMMIT_SHA}/g" \
-          -e "s/\${message}/${CI_COMMIT_TITLE}/g" \
-          -e "s/\${joburl}/$((CI_JOB_ID - 1))/g" \
-      ./feature-fail.json | curl -s -X POST "https://hooks.slack.com/services/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" -H 'Content-Type:application/json' -d @-
-  except:
-    - tags
-    - master
+  - curl -s -o "./user-mapping.sh" "https://gitlab.i-run.fr/snippets/2/raw"
+  - curl -s -o "./feature-fail.json" "https://gitlab.i-run.fr/share/snippet/snippets/8/raw"
+  - source "./user-mapping.sh"
+  - |
+    sed -e "s/\${committer}/${USERS[$GITLAB_USER_LOGIN]:-$GITLAB_USER_LOGIN}/g" \
+        -e "s/\${branch}/${CI_COMMIT_REF_NAME}/g" \
+        -e "s/\${commit}/${CI_COMMIT_SHA}/g" \
+        -e "s/\${message}/${CI_COMMIT_TITLE}/g" \
+        -e "s~\${joburl}~${CI_PROJECT_URL}/-/jobs/$((CI_JOB_ID - 1))~g" \
+    ./feature-fail.json | curl -s -X POST "https://hooks.slack.com/services/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" -H 'Content-Type:application/json' -d @-
   when: on_failure

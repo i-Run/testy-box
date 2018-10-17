@@ -6,18 +6,28 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>nora-parent</artifactId>
-        <version>3-SNAPSHOT</version>
+        <version>3</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
     <version>1.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <scm>
+        <connection>scm:git:git@gitlab.i-run.fr:irun-back/testy-box.git</connection>
+        <developerConnection>scm:git:git@gitlab.i-run.fr:irun-back/testy-box.git</developerConnection>
+        <url>https://gitlab.i-run.fr/irun-back/testy-box</url>
+    </scm>
 
     <modules>
         <module>testy-mongo-box</module>
         <module>testy-core-box</module>
         <module>testy-jooq-box</module>
     </modules>
+
+    <properties>
+        <flapdoodle.version>2.1.1</flapdoodle.version>
+        <javax.inject.version>1</javax.inject.version>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -31,12 +41,12 @@
             <dependency>
                 <groupId>de.flapdoodle.embed</groupId>
                 <artifactId>de.flapdoodle.embed.mongo</artifactId>
-                <version>2.1.1</version>
+                <version>${flapdoodle.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
-                <version>1</version>
+                <version>${javax.inject.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
