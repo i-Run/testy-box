@@ -1,12 +1,5 @@
 image: docker.i-run.fr/irun-compiler:20180720.01
 
-stages:
-  - build
-  - test
-  - release
-  - deploy
-  - notify
-
 variables:
   #GIT_SUBMODULE_STRATEGY: normal
   # As of Maven 3.3.0 instead of this you may define these options in `.mvn/maven.config` so the same config is used
@@ -17,43 +10,54 @@ variables:
 cache:
   key: ${CI_COMMIT_REF_SLUG}
   paths:
-    - ${CI_PROJECT_DIR}/.m2/repository/
+  - ${CI_PROJECT_DIR}/.m2/repository/
+
+stages:
+- build
+- test
+- release
+- deploy
+- notify
 
 maven:build:
   stage: build
-  script: mvn ${MAVEN_CLI_OPTS} clean compile
+  script:
+  - mvn ${MAVEN_CLI_OPTS} clean compile
   artifacts:
     when: on_success
     expire_in: 1 hour
     untracked: true
 
+maven:checkstyle:
+  stage: test
+  dependencies:
+  - maven:build
+  cache:
+    policy: pull
+  script:
+  - mvn ${MAVEN_CLI_OPTS} install checkstyle:check -DskipTests
+
 maven:test:
   stage: test
   dependencies:
-    - maven:build
+  - maven:build
   script: mvn ${MAVEN_CLI_OPTS} test
-#  artifacts:
-#    reports:
-#      junit: [
-#        testy-core-box/target/surefire-reports/TEST-*.xml,
-#        testy-jooq-box/target/surefire-reports/TEST-*.xml,
-#        testy-mongo-box/target/surefire-reports/TEST-*.xml
-#      ]
-
-maven:sonar:
-  stage: test
-  dependencies:
-    - maven:build
-  script: mvn ${MAVEN_CLI_OPTS} verify sonar:sonar -Psonar
-  only:
-    - tags
+  artifacts:
+    reports:
+      junit: [
+        testy-core-box/target/surefire-reports/TEST-*.xml,
+        testy-jooq-box/target/surefire-reports/TEST-*.xml,
+        testy-mongo-box/target/surefire-reports/TEST-*.xml
+      ]
 
 maven:release:
   stage: release
+  dependencies:
+  - maven:build
   before_script:
-    - git checkout -B "$CI_BUILD_REF_NAME"
-    - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
-    - git clean -f
+  - git checkout -B "$CI_BUILD_REF_NAME"
+  - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
+  - git clean -f
   script: |
     mvn ${MAVEN_CLI_OPTS} \
       release:prepare \
@@ -63,15 +67,14 @@ maven:release:
       release:perform \
         -Darguments="-DskipTests=true" \
         -Dmaven.javadoc.skip=true
-  dependencies:
-    - maven:build
+  when: manual
   only:
-    - web
+  - master
 
 maven:deploy:
   stage: deploy
   dependencies:
-    - maven:build
+  - maven:build
   script: mvn ${MAVEN_CLI_OPTS} deploy
 
 slack:failure:
