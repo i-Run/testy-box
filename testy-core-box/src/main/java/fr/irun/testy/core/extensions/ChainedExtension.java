@@ -1,6 +1,14 @@
 package fr.irun.testy.core.extensions;
 
-import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,8 +16,9 @@ import java.util.List;
 /**
  * Allow to given an order to the Registered extensions.
  * <p>
- * In this example, {@code WithEntityMongoClient} need that before method of {@code WithObjectMapper} and {@code WithEmbeddedMongo}
- * was invoked before its before method.
+ * In this example, {@code WithEntityMongoClient} need that before method of {@code WithObjectMapper}
+ * and {@code WithEmbeddedMongo} was invoked before its before method.
+ * </p>
  *
  * <pre style="code">
  *     private static WithEmbeddedMongo wMongo = WithEmbeddedMongo.builder().build();
@@ -31,7 +40,8 @@ import java.util.List;
  *             .register();
  * </pre>
  */
-public class ChainedExtension implements BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+public final class ChainedExtension implements
+        BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
     private final Extension[] extensions;
 
@@ -82,7 +92,9 @@ public class ChainedExtension implements BeforeAllCallback, AfterAllCallback, Be
         for (Extension ex : extensions) {
             if (ex instanceof ParameterResolver) {
                 boolean isSupported = ((ParameterResolver) ex).supportsParameter(parameterContext, extensionContext);
-                if (isSupported) return true;
+                if (isSupported) {
+                    return true;
+                }
             }
         }
 
@@ -101,8 +113,9 @@ public class ChainedExtension implements BeforeAllCallback, AfterAllCallback, Be
             } catch (Exception e) {
                 lastException = e;
             }
-            if (param != null)
+            if (param != null) {
                 return param;
+            }
         }
 
         return new ParameterResolutionException("Unable to resolve parameter !", lastException);

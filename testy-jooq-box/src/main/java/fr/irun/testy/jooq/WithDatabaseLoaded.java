@@ -8,7 +8,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import javax.sql.DataSource;
 import java.util.Objects;
 
-public class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCallback {
+public final class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCallback {
     private static final String P_LOADED = "dbLoaded";
 
     private final DatasourceExtension wDatasource;
@@ -19,8 +19,10 @@ public class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCallback
 
     @Override
     public void beforeAll(ExtensionContext context) {
-        String catalog = Objects.requireNonNull(wDatasource.getCatalog(context), "Catalog not found in context Store !");
-        DataSource dataSource = Objects.requireNonNull(wDatasource.getDataSource(context), "DataSource not found in context Store !");
+        String catalog = Objects.requireNonNull(wDatasource.getCatalog(context),
+                "Catalog not found in context Store !");
+        DataSource dataSource = Objects.requireNonNull(wDatasource.getDataSource(context),
+                "DataSource not found in context Store !");
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(dataSource);

@@ -6,17 +6,20 @@ import org.jooq.Query;
 import org.jooq.TableRecord;
 import org.jooq.UpdatableRecord;
 import org.jooq.impl.DSL;
-import org.junit.jupiter.api.extension.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(WithSampleDataLoaded.class);
+public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
     private static final String P_TRACKER = "sampleTracker";
 
     private final WithDslContext wDsl;
@@ -42,8 +45,9 @@ public class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallba
             throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
         }
 
-        if (tracker.skipNext.getAndSet(false))
+        if (tracker.skipNext.getAndSet(false)) {
             return;
+        }
 
         DSLContext dslContext = wDsl.getDslContext(context);
         dslContext.transaction(tx -> {
@@ -61,16 +65,19 @@ public class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallba
     }
 
     @Override
-    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
         Class<?> type = parameterContext.getParameter().getType();
         return Tracker.class.equals(type);
     }
 
     @Override
-    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
         Class<?> type = parameterContext.getParameter().getType();
-        if (Tracker.class.equals(type))
+        if (Tracker.class.equals(type)) {
             return getStore(extensionContext).get(P_TRACKER);
+        }
 
         throw new NoSuchElementException(P_TRACKER);
     }
@@ -87,6 +94,7 @@ public class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallba
             this.dslExtension = dslExtension;
         }
 
+        @SuppressWarnings("unchecked")
         public SampleLoaderBuilder addDataset(RelationalDataSet dataset) {
             records.addAll(dataset.records());
             return this;

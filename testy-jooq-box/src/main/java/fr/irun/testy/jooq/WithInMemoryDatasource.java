@@ -3,9 +3,13 @@ package fr.irun.testy.jooq;
 import fr.irun.testy.jooq.annotations.DbCatalogName;
 import org.h2.jdbcx.JdbcDataSource;
 import org.h2.tools.Server;
-import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +21,8 @@ import java.util.UUID;
 /**
  * Allow to create an H2 in-memory database.
  * <p>
- * Usable with {@link ExtendWith} or {@link RegisterExtension}:
+ * Usable with {@link org.junit.jupiter.api.extension.ExtendWith} or
+ * {@link org.junit.jupiter.api.extension.RegisterExtension}:
  * <pre><code>
  *     {@literal @}RegisterExtension
  *     static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder()
@@ -25,9 +30,9 @@ import java.util.UUID;
  *             .wrapTcpServer(true)
  *             .build();
  * </code></pre>
- * <p>
+ * </p><p>
  * The default value for the catalog is random UUID. By default the TCP Server was not run.
- * <p>
+ * </p><p>
  * The database parameters :
  * <ul>
  * <li>MODE=MySQL</li>
@@ -36,8 +41,9 @@ import java.util.UUID;
  * <li>TIMEZONE=UTC</li>
  * <li>SCHEMA created and set</li>
  * </ul>
- * <p>
+ * </p><p>
  * For inject the auto-generated catalog name use {@link DbCatalogName} annotation
+ * </p>
  *
  * @see DbCatalogName
  */
@@ -68,8 +74,9 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         Store store = getStore(context);
 
         JdbcDataSource ds = new JdbcDataSource();
-//        TRACE_LEVEL_SYSTEM_OUT=3;
-        ds.setURL("jdbc:h2:mem:" + catalog + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;INIT=CREATE SCHEMA IF NOT EXISTS " + catalog + "\\; SET SCHEMA " + catalog);
+        // TRACE_LEVEL_SYSTEM_OUT=3;
+        ds.setURL("jdbc:h2:mem:" + catalog + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;"
+                + "INIT=CREATE SCHEMA IF NOT EXISTS " + catalog + "\\; SET SCHEMA " + catalog);
         if (withTcpServer) {
             Server h2TcpServer = Server.createTcpServer("-tcpAllowOthers");
             Server server = h2TcpServer.start();
@@ -93,29 +100,31 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     public void afterAll(ExtensionContext context) {
         Store store = getStore(context);
         Server tcpServer = store.get(P_TCP_SERVER, Server.class);
-        if (tcpServer != null)
+        if (tcpServer != null) {
             tcpServer.stop();
+        }
     }
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
-        if (DataSource.class.equals(type))
+        if (DataSource.class.equals(type)) {
             return true;
-        else if (Server.class.equals(type))
+        } else if (Server.class.equals(type)) {
             return true;
-        else
+        } else {
             return String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class);
+        }
     }
 
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
-        if (DataSource.class.equals(type))
+        if (DataSource.class.equals(type)) {
             return getStore(extensionContext).get(P_DATASOUCE, DataSource.class);
-        else if (Server.class.equals(type))
+        } else if (Server.class.equals(type)) {
             return getStore(extensionContext).get(P_TCP_SERVER, Server.class);
-        else if (String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class)) {
+        } else if (String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class)) {
             return getStore(extensionContext).get(P_CATALOG);
         }
 

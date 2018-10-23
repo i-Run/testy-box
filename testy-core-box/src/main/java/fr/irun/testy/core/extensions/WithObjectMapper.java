@@ -5,19 +5,30 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Allow getting a Jackson ObjectMapper in Tests.
  * <p>
  * By default this extension search and register modules in classpath, but it is possible
  * to pass specific module list at creation time.
+ * </p>
  * <p>
  * The {@link SerializationFeature#WRITE_DATES_AS_TIMESTAMPS} feature is disable, only no null
  * properties was included in serialization.
+ * </p>
  */
 public class WithObjectMapper implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
     private static final String P_JACKSON_MAPPER = "jackson-mapper";
@@ -37,8 +48,9 @@ public class WithObjectMapper implements BeforeAllCallback, BeforeEachCallback, 
     @Override
     public void beforeAll(ExtensionContext context) {
         ObjectMapper mapper = new ObjectMapper();
-        if (findAndRegisterModules)
+        if (findAndRegisterModules) {
             mapper.findAndRegisterModules();
+        }
 
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
@@ -55,8 +67,9 @@ public class WithObjectMapper implements BeforeAllCallback, BeforeEachCallback, 
     public void beforeEach(ExtensionContext context) {
         Store store = getStore(context);
         Object mapper = store.get(P_JACKSON_MAPPER);
-        if (mapper == null)
+        if (mapper == null) {
             beforeAll(context);
+        }
     }
 
     @Override

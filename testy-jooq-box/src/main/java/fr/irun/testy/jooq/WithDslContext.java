@@ -30,10 +30,11 @@ import java.util.Objects;
  *             .setDialect(SQLDialect.MYSQL_5_7)
  *             .build();
  * </code></pre>
- * <p>
+ * </p><p>
  * The default value for {@link SQLDialect} is {@link SQLDialect#H2}
+ * </p>
  */
-public class WithDslContext implements BeforeAllCallback, ParameterResolver {
+public final class WithDslContext implements BeforeAllCallback, ParameterResolver {
 
     private static final String P_DSL_CONTEXT = "dslContext";
     private static final String P_DSL_DIALECT = "dslDialect";

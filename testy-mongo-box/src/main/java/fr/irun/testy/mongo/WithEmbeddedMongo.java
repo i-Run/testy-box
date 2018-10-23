@@ -16,9 +16,14 @@ import de.flapdoodle.embed.process.config.io.ProcessOutput;
 import de.flapdoodle.embed.process.io.Processors;
 import de.flapdoodle.embed.process.io.Slf4jLevel;
 import de.flapdoodle.embed.process.runtime.Network;
-import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
@@ -34,8 +39,9 @@ import java.util.UUID;
  * <p>
  * The flapdoodle download the expected version of Mongo DB in <code>~/.embedmongo</code> and
  * run a database for the test.
- * <p>
+ * </p><p>
  * From this database, an async {@link MongoClient} is created and a Spring {@link ReactiveMongoDatabaseFactory} wrap it.
+ * </p>
  *
  * @see <a href="https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo">flapdoodle</a>
  */
@@ -113,16 +119,17 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
         }
 
         MongodExecutable mongodExe = store.get(P_MONGO_EXE, MongodExecutable.class);
-        if (mongodExe != null)
+        if (mongodExe != null) {
             mongodExe.stop();
+        }
     }
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Parameter parameter = parameterContext.getParameter();
         Class<?> type = parameter.getType();
-        return type.equals(MongoClient.class) || type.equals(ReactiveMongoDatabaseFactory.class) ||
-                (type.equals(String.class) && parameter.isAnnotationPresent(MongoDatabaseName.class));
+        return type.equals(MongoClient.class) || type.equals(ReactiveMongoDatabaseFactory.class)
+                || (type.equals(String.class) && parameter.isAnnotationPresent(MongoDatabaseName.class));
     }
 
     @Override

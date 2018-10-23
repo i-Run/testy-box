@@ -4,7 +4,7 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>nora-parent</artifactId>
-        <version>3</version>
+        <version>4-SNAPSHOT</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
