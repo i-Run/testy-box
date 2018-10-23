@@ -43,6 +43,7 @@ maven:test:
   - maven:build
   script: mvn ${MAVEN_CLI_OPTS} test
   artifacts:
+    untracked: true
     reports:
       junit: [
         testy-core-box/target/surefire-reports/TEST-*.xml,
@@ -70,6 +71,18 @@ maven:release:
   when: manual
   only:
   - master
+
+maven:sonar:
+  stage: deploy
+  dependencies:
+    - maven:test
+  allow_failure: true
+  cache:
+    policy: pull
+  script:
+  - mvn ${MAVEN_CLI_OPTS} sonar:sonar -Psonar
+  only:
+    - master
 
 maven:deploy:
   stage: deploy
