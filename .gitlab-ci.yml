@@ -80,7 +80,7 @@ maven:sonar:
   cache:
     policy: pull
   script:
-  - mvn ${MAVEN_CLI_OPTS} sonar:sonar -Psonar
+  - mvn ${MAVEN_CLI_OPTS} test sonar:sonar -Psonar
   only:
     - master
 

@@ -24,11 +24,12 @@ public final class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCa
         DataSource dataSource = Objects.requireNonNull(wDatasource.getDataSource(context),
                 "DataSource not found in context Store !");
 
-        Flyway flyway = new Flyway();
-        flyway.setDataSource(dataSource);
-        flyway.setSchemas(catalog);
-        flyway.setPlaceholderReplacement(false);
-        flyway.setLocations("classpath:db.migration." + catalog);
+        Flyway flyway = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(catalog)
+                .placeholderReplacement(false)
+                .locations("classpath:db.migration." + catalog)
+                .load();
         flyway.migrate();
 
         getStore(context).put(P_LOADED, true);
