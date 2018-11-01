@@ -1,5 +1,6 @@
 package fr.irun.testy.jooq;
 
+import com.google.common.collect.Lists;
 import fr.irun.testy.jooq.model.RelationalDataSet;
 import org.jooq.DSLContext;
 import org.jooq.Query;
@@ -51,7 +52,8 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
         DSLContext dslContext = wDsl.getDslContext(context);
         dslContext.transaction(tx -> {
             DSLContext txDsl = DSL.using(tx);
-            records.stream().map(TableRecord::getTable).distinct()
+            Lists.reverse(records).stream()
+                    .map(TableRecord::getTable).distinct()
                     .map(txDsl::truncate)
                     .forEach(Query::execute);
             records.forEach(r -> r.changed(true));

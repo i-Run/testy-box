@@ -57,15 +57,18 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
 
     private final String catalog;
     private final boolean withTcpServer;
+    private final boolean withReferentialIntegrity;
 
     public WithInMemoryDatasource() {
         this.catalog = generateRandomCatalogName();
         this.withTcpServer = false;
+        this.withReferentialIntegrity = true;
     }
 
-    private WithInMemoryDatasource(String catalog, boolean withTcpServer) {
+    private WithInMemoryDatasource(String catalog, boolean withTcpServer, boolean withReferentialIntegrity) {
         this.catalog = Objects.requireNonNull(catalog);
         this.withTcpServer = withTcpServer;
+        this.withReferentialIntegrity = withReferentialIntegrity;
     }
 
     @Override
@@ -74,9 +77,13 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         Store store = getStore(context);
 
         JdbcDataSource ds = new JdbcDataSource();
-        // TRACE_LEVEL_SYSTEM_OUT=3;
-        ds.setURL("jdbc:h2:mem:" + catalog + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;"
-                + "INIT=CREATE SCHEMA IF NOT EXISTS " + catalog + "\\; SET SCHEMA " + catalog);
+        String databaseUrl = "jdbc:h2:mem:" + catalog + ";"
+                + "MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;"
+                // + "TRACE_LEVEL_SYSTEM_OUT=3;"
+                + "INIT=CREATE SCHEMA IF NOT EXISTS " + catalog + "\\; "
+                + "SET SCHEMA " + catalog + "\\; "
+                + "SET REFERENTIAL_INTEGRITY " + Boolean.toString(withReferentialIntegrity).toUpperCase();
+        ds.setURL(databaseUrl);
         if (withTcpServer) {
             Server h2TcpServer = Server.createTcpServer("-tcpAllowOthers");
             Server server = h2TcpServer.start();
@@ -148,6 +155,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     public static class WithInMemoryDatasourceBuilder {
         private String catalog = generateRandomCatalogName();
         private boolean withTcpServer = false;
+        private boolean withReferentialIntegrity = true;
 
         public WithInMemoryDatasourceBuilder setCatalog(String catalog) {
             this.catalog = catalog;
@@ -159,8 +167,13 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
             return this;
         }
 
+        public WithInMemoryDatasourceBuilder setReferentialIntegrity(boolean integrity) {
+            this.withReferentialIntegrity = integrity;
+            return this;
+        }
+
         public WithInMemoryDatasource build() {
-            return new WithInMemoryDatasource(this.catalog, this.withTcpServer);
+            return new WithInMemoryDatasource(this.catalog, this.withTcpServer, this.withReferentialIntegrity);
         }
     }
 }
