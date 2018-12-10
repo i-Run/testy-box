@@ -1,4 +1,4 @@
-image: docker.i-run.fr/irun-compiler:20180720.01
+image: docker.i-run.fr/irun-compiler:20181123.01
 
 variables:
   #GIT_SUBMODULE_STRATEGY: normal
@@ -22,7 +22,7 @@ stages:
 maven:build:
   stage: build
   script:
-  - mvn ${MAVEN_CLI_OPTS} clean compile
+  - mvn ${MAVEN_CLI_OPTS} clean compile -DskipTests
   artifacts:
     when: on_success
     expire_in: 1 hour
@@ -95,7 +95,7 @@ slack:failure:
   variables:
     GIT_STRATEGY: none
   script:
-  - curl -s -o "./user-mapping.sh" "https://gitlab.i-run.fr/snippets/2/raw"
+  - curl -s -o "./user-mapping.sh" "https://gitlab.i-run.fr/share/snippet/snippets/9/raw"
   - curl -s -o "./feature-fail.json" "https://gitlab.i-run.fr/share/snippet/snippets/8/raw"
   - source "./user-mapping.sh"
   - |
