@@ -22,7 +22,7 @@ stages:
 maven:build:
   stage: build
   script:
-  - mvn ${MAVEN_CLI_OPTS} clean compile -DskipTests
+  - mvn ${MAVEN_CLI_OPTS} clean package -U -DskipTests
   artifacts:
     when: on_success
     expire_in: 1 hour
@@ -87,7 +87,7 @@ maven:deploy:
   stage: deploy
   dependencies:
   - maven:build
-  script: mvn ${MAVEN_CLI_OPTS} deploy
+  script: mvn ${MAVEN_CLI_OPTS} deploy -DskipTests
 
 slack:failure:
   stage: notify
