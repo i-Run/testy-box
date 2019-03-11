@@ -3,8 +3,8 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>fr.irun</groupId>
-        <artifactId>nora-parent</artifactId>
-        <version>4-SNAPSHOT</version>
+        <artifactId>rocket-parent</artifactId>
+        <version>1-SNAPSHOT</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
