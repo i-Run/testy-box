@@ -1,4 +1,4 @@
-image: docker.i-run.fr/irun-compiler:20181123.01
+image: d.i-run.fr/irun-compiler:20190212.ad9ab9c2
 
 variables:
   #GIT_SUBMODULE_STRATEGY: normal
@@ -81,13 +81,16 @@ maven:sonar:
   script:
     - mvn ${MAVEN_CLI_OPTS} test sonar:sonar -Psonar
   only:
-    - master
+    - develop
 
 maven:deploy:
   stage: deploy
   dependencies:
   - maven:build
   script: mvn ${MAVEN_CLI_OPTS} deploy -DskipTests
+  only:
+    - develop
+    - master
 
 slack:failure:
   stage: notify
