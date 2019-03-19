@@ -23,6 +23,7 @@ import java.util.UUID;
  * <p>
  * Usable with {@link org.junit.jupiter.api.extension.ExtendWith} or
  * {@link org.junit.jupiter.api.extension.RegisterExtension}:
+ * </p>
  * <pre><code>
  *     {@literal @}RegisterExtension
  *     static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder()
@@ -30,10 +31,10 @@ import java.util.UUID;
  *             .wrapTcpServer(true)
  *             .build();
  * </code></pre>
- * </p><p>
+ * <p>
  * The default value for the catalog is random UUID. By default the TCP Server was not run.
- * </p><p>
- * The database parameters :
+ * </p>
+ * <p>The database parameters :</p>
  * <ul>
  * <li>MODE=MySQL</li>
  * <li>DB_CLOSE_DELAY=-1</li>
@@ -41,7 +42,7 @@ import java.util.UUID;
  * <li>TIMEZONE=UTC</li>
  * <li>SCHEMA created and set</li>
  * </ul>
- * </p><p>
+ * <p>
  * For inject the auto-generated catalog name use {@link DbCatalogName} annotation
  * </p>
  *
