@@ -56,6 +56,9 @@ maven:release:
   dependencies:
   - maven:build
   before_script:
+    - git config user.email
+    - git config --global user.email "devel@i-run.fr"
+    - git config --global user.name "BriGit"
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
@@ -68,8 +71,10 @@ maven:release:
           -DscmCommentPrefix="[maven-release][skip CI] " \
         release:perform \
           -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
+    - git clone "git@gitlab.i-run.fr:${CI_PROJECT_PATH}.git"
+    - cd "${CI_PROJECT_NAME}"
     - git checkout master
-    - git merge --no-ff develop~1
+    - git merge --no-ff origin/develop~1
     - git push origin master
   when: manual
   only:
