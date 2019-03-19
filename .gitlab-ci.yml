@@ -59,17 +59,18 @@ maven:release:
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
-  script: |
-    mvn ${MAVEN_CLI_OPTS} \
-      release:prepare \
-        -DtagNameFormat="@{version}" \
-        -DupdateDependencies=false \
-        -DscmCommentPrefix="[maven-release][skip CI] " \
-      release:perform \
-        -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
-  after_script:
+  script: 
+    - |
+      mvn ${MAVEN_CLI_OPTS} \
+        release:prepare \
+          -DtagNameFormat="@{version}" \
+          -DupdateDependencies=false \
+          -DscmCommentPrefix="[maven-release][skip CI] " \
+        release:perform \
+          -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
     - git checkout master
     - git merge --no-ff develop~1
+    - git push origin master
   when: manual
   only:
     - develop
