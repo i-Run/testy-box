@@ -18,8 +18,7 @@ import java.util.Objects;
 
 /**
  * Provide a {@link DSLContext} for the Unit Test
- * <p>
- * Usage:
+ * <p>Usage:</p>
  * <pre><code>
  *     {@literal @}RegisterExtension
  *     static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder().build();
@@ -30,7 +29,7 @@ import java.util.Objects;
  *             .setDialect(SQLDialect.MYSQL_5_7)
  *             .build();
  * </code></pre>
- * </p><p>
+ * <p>
  * The default value for {@link SQLDialect} is {@link SQLDialect#H2}
  * </p>
  */
