@@ -66,8 +66,7 @@ maven:release:
         -DupdateDependencies=false \
         -DscmCommentPrefix="[maven-release][skip CI] " \
       release:perform \
-        -Darguments="-DskipTests=true" \
-        -Dmaven.javadoc.skip=true
+        -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
   after_script:
     - git checkout master
     - git merge --no-ff develop~1
