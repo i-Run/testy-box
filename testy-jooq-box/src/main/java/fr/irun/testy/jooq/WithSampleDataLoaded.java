@@ -54,7 +54,7 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
             DSLContext txDsl = DSL.using(tx);
             Lists.reverse(records).stream()
                     .map(TableRecord::getTable).distinct()
-                    .map(txDsl::truncate)
+                    .map(txDsl::delete)
                     .forEach(Query::execute);
             records.forEach(r -> r.changed(true));
             txDsl.batchInsert(records).execute();
