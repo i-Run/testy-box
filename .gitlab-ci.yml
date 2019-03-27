@@ -38,6 +38,15 @@ maven:checkstyle:
   script:
   - mvn ${MAVEN_CLI_OPTS} install checkstyle:check -DskipTests
 
+maven:javadoc:
+  stage: test
+  dependencies:
+    - maven:build
+  cache:
+    policy: pull
+  script:
+    - mvn ${MAVEN_CLI_OPTS} javadoc:javadoc
+    
 maven:test:
   stage: test
   dependencies:
@@ -97,6 +106,15 @@ maven:deploy:
   only:
     - develop
     - master
+
+javadoc:deploy:
+  stage: notify
+  allow_failure: true
+  cache: {}
+  script: 
+    - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=develop "${CI_API_V4_URL}/projects/65/trigger/pipeline"
+  only:
+    - develop
 
 mattermost:failure:
   stage: notify
