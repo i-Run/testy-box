@@ -30,6 +30,7 @@ public final class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCa
                 .placeholderReplacement(false)
                 .locations("classpath:db.migration." + catalog)
                 .load();
+        flyway.clean();
         flyway.migrate();
 
         getStore(context).put(P_LOADED, true);
