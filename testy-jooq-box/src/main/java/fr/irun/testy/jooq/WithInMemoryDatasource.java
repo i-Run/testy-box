@@ -96,10 +96,12 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         store.put(P_CATALOG, catalog);
     }
 
+    @Override
     public String getCatalog(ExtensionContext context) {
         return getStore(context).get(P_CATALOG, String.class);
     }
 
+    @Override
     public DataSource getDataSource(ExtensionContext context) {
         return getStore(context).get(P_DATASOUCE, DataSource.class);
     }

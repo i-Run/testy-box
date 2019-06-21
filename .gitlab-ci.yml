@@ -22,8 +22,11 @@ stages:
 
 maven:build:
   stage: build
+  before_script:
+    - find ${CI_PROJECT_DIR}/.m2/repository -type f -name "*SNAPSHOT*" -delete || true
+    - .gitlab/install-deps.sh
   script:
-  - mvn ${MAVEN_CLI_OPTS} clean install -U -DskipTests
+    - mvn ${MAVEN_CLI_OPTS} clean install -DskipTests
   artifacts:
     when: on_success
     expire_in: 1 hour
@@ -38,11 +41,20 @@ maven:checkstyle:
   script:
   - mvn ${MAVEN_CLI_OPTS} install checkstyle:check -DskipTests
 
+maven:javadoc:
+  stage: test
+  dependencies:
+    - maven:build
+  cache:
+    policy: pull
+  script:
+    - mvn ${MAVEN_CLI_OPTS} javadoc:javadoc
+    
 maven:test:
   stage: test
   dependencies:
   - maven:build
-  script: mvn ${MAVEN_CLI_OPTS} test
+  script: mvn ${MAVEN_CLI_OPTS} test -Pintegration
   artifacts:
     reports:
       junit: [
@@ -56,9 +68,6 @@ maven:release:
   dependencies:
   - maven:build
   before_script:
-    - git config user.email
-    - git config --global user.email "devel@i-run.fr"
-    - git config --global user.name "BriGit"
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
@@ -74,7 +83,7 @@ maven:release:
     - git clone "git@gitlab.i-run.fr:${CI_PROJECT_PATH}.git"
     - cd "${CI_PROJECT_NAME}"
     - git checkout master
-    - git merge --no-ff origin/develop~1
+    - git merge --no-ff -m "[maven-release][skip CI] Merge release in master" origin/develop~1
     - git push origin master
   when: manual
   only:
@@ -100,6 +109,15 @@ maven:deploy:
   only:
     - develop
     - master
+
+javadoc:deploy:
+  stage: notify
+  allow_failure: true
+  cache: {}
+  script: 
+    - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=develop "${CI_API_V4_URL}/projects/65/trigger/pipeline"
+  only:
+    - develop
 
 mattermost:failure:
   stage: notify
