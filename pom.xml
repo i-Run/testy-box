@@ -11,9 +11,9 @@
     <version>1.1.2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <scm>
-        <connection>scm:git:git@gitlab.i-run.fr:irun-back/testy-box.git</connection>
-        <developerConnection>scm:git:git@gitlab.i-run.fr:irun-back/testy-box.git</developerConnection>
-        <url>https://gitlab.i-run.fr/irun-back/testy-box</url>
+        <connection>scm:git:git@gitlab.i-run.fr:nora/rocket/testy-box.git</connection>
+        <developerConnection>scm:git:git@gitlab.i-run.fr:nora/rocket/testy-box.git</developerConnection>
+        <url>https://gitlab.i-run.fr/nora/rocket/testy-box</url>
       <tag>HEAD</tag>
   </scm>
 
