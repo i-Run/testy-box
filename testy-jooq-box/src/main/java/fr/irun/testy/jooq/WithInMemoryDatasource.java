@@ -1,6 +1,7 @@
 package fr.irun.testy.jooq;
 
 import fr.irun.testy.jooq.annotations.DbCatalogName;
+import fr.irun.testy.jooq.model.DatabaseTraceLevel;
 import org.h2.jdbcx.JdbcDataSource;
 import org.h2.tools.Server;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -59,17 +60,20 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     private final String catalog;
     private final boolean withTcpServer;
     private final boolean withReferentialIntegrity;
+    private final DatabaseTraceLevel traceLevel;
 
     public WithInMemoryDatasource() {
         this.catalog = generateRandomCatalogName();
         this.withTcpServer = false;
         this.withReferentialIntegrity = true;
+        this.traceLevel = DatabaseTraceLevel.OFF;
     }
 
-    private WithInMemoryDatasource(String catalog, boolean withTcpServer, boolean withReferentialIntegrity) {
+    private WithInMemoryDatasource(String catalog, boolean withTcpServer, boolean withReferentialIntegrity, DatabaseTraceLevel traceLevel) {
         this.catalog = Objects.requireNonNull(catalog);
         this.withTcpServer = withTcpServer;
         this.withReferentialIntegrity = withReferentialIntegrity;
+        this.traceLevel = traceLevel;
     }
 
     @Override
@@ -80,7 +84,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         JdbcDataSource ds = new JdbcDataSource();
         String databaseUrl = "jdbc:h2:mem:" + catalog + ";"
                 + "MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;"
-                // + "TRACE_LEVEL_SYSTEM_OUT=3;"
+                + "TRACE_LEVEL_SYSTEM_OUT=" + traceLevel.levelValue + ";"
                 + "INIT=CREATE SCHEMA IF NOT EXISTS " + catalog + "\\; "
                 + "SET SCHEMA " + catalog + "\\; "
                 + "SET REFERENTIAL_INTEGRITY " + Boolean.toString(withReferentialIntegrity).toUpperCase();
@@ -159,6 +163,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         private String catalog = generateRandomCatalogName();
         private boolean withTcpServer = false;
         private boolean withReferentialIntegrity = true;
+        private DatabaseTraceLevel traceLevel = DatabaseTraceLevel.OFF;
 
         public WithInMemoryDatasourceBuilder setCatalog(String catalog) {
             this.catalog = catalog;
@@ -175,8 +180,13 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
             return this;
         }
 
+        public WithInMemoryDatasourceBuilder setTraceLevel(DatabaseTraceLevel traceLevel) {
+            this.traceLevel = traceLevel;
+            return this;
+        }
+
         public WithInMemoryDatasource build() {
-            return new WithInMemoryDatasource(this.catalog, this.withTcpServer, this.withReferentialIntegrity);
+            return new WithInMemoryDatasource(this.catalog, this.withTcpServer, this.withReferentialIntegrity, this.traceLevel);
         }
     }
 }
