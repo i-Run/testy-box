@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 
+import javax.inject.Named;
 import javax.sql.DataSource;
 import java.util.Objects;
 
@@ -63,7 +64,15 @@ public final class WithDslContext implements BeforeAllCallback, ParameterResolve
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
-        return DSLContext.class.equals(type) || SQLDialect.class.equals(type);
+        final String catalog = Objects.requireNonNull(wDs.getCatalog(extensionContext), "Catalog not found in context Store !");
+
+        return (DSLContext.class.equals(type) || SQLDialect.class.equals(type)) && catalog.equals(getCatalogForParameter(parameterContext, catalog));
+    }
+
+    private String getCatalogForParameter(ParameterContext parameterContext, String catalogDefault) {
+        return parameterContext.findAnnotation(Named.class)
+                .map(Named::value)
+                .orElse(catalogDefault);
     }
 
     @Override
@@ -79,12 +88,17 @@ public final class WithDslContext implements BeforeAllCallback, ParameterResolve
         throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
 
+    DatasourceExtension getDatasourceExtension() {
+        return this.wDs;
+    }
+
     public DSLContext getDslContext(ExtensionContext context) {
         return getStore(context).get(P_DSL_CONTEXT, DSLContext.class);
     }
 
     private Store getStore(ExtensionContext context) {
-        return context.getStore(Namespace.create(getClass().getName()));
+        final String catalog = Objects.requireNonNull(wDs.getCatalog(context), "Catalog not found in context Store !");
+        return context.getStore(Namespace.create(getClass().getName(), catalog));
     }
 
     public static WithDslContextBuilder builder() {

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Named;
 import javax.sql.DataSource;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -123,13 +124,20 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
         if (DataSource.class.equals(type)) {
-            return true;
+            return catalog.equals(getCatalogForParameter(parameterContext));
         } else if (Server.class.equals(type)) {
-            return true;
+            return catalog.equals(getCatalogForParameter(parameterContext));
         } else {
             return String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class);
         }
     }
+
+    private String getCatalogForParameter(ParameterContext parameterContext) {
+        return parameterContext.findAnnotation(Named.class)
+                .map(Named::value)
+                .orElse(catalog);
+    }
+
 
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
@@ -141,7 +149,6 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         } else if (String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class)) {
             return getStore(extensionContext).get(P_CATALOG);
         }
-
         throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
 
@@ -152,7 +159,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     }
 
     private Store getStore(ExtensionContext context) {
-        return context.getStore(Namespace.create(getClass().getName()));
+        return context.getStore(Namespace.create(getClass().getName(), catalog));
     }
 
     public static WithInMemoryDatasourceBuilder builder() {

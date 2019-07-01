@@ -44,7 +44,9 @@ public final class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCa
     }
 
     private ExtensionContext.Store getStore(ExtensionContext context) {
-        return context.getStore(ExtensionContext.Namespace.create(getClass().getName()));
+        final String catalog = Objects.requireNonNull(wDatasource.getCatalog(context),
+                "Catalog not found in context Store !");
+        return context.getStore(ExtensionContext.Namespace.create(getClass().getName(), catalog));
     }
 
     public static WithDatabaseLoadedBuilder builder() {

@@ -14,9 +14,11 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 
+import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
@@ -62,13 +64,23 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
     }
 
     private ExtensionContext.Store getStore(ExtensionContext context) {
-        return context.getStore(ExtensionContext.Namespace.create(getClass().getName()));
+        final String catalog = Objects.requireNonNull(wDsl.getDatasourceExtension().getCatalog(context),
+                "Catalog not found in context Store !");
+        return context.getStore(ExtensionContext.Namespace.create(getClass().getName(), catalog));
     }
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
-        return Tracker.class.equals(type);
+        final String catalog = Objects.requireNonNull(wDsl.getDatasourceExtension().getCatalog(extensionContext),
+                "Catalog not found in context Store !");
+        return Tracker.class.equals(type) && catalog.equals(getCatalogForParameter(parameterContext, catalog));
+    }
+
+    private String getCatalogForParameter(ParameterContext parameterContext, String catalogDefault) {
+        return parameterContext.findAnnotation(Named.class)
+                .map(Named::value)
+                .orElse(catalogDefault);
     }
 
     @Override
