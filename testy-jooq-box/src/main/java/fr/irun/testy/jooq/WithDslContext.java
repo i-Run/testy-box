@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 
+import javax.inject.Named;
 import javax.sql.DataSource;
 import java.util.Objects;
 
@@ -56,31 +57,51 @@ public final class WithDslContext implements BeforeAllCallback, ParameterResolve
 
         DSLContext dslContext = DSL.using(ds, dialect, settings);
 
-        getStore(context).put(P_DSL_DIALECT, dialect);
-        getStore(context).put(P_DSL_CONTEXT, dslContext);
+        final String catalog = getContextCatalog(context);
+        getStore(context).put(P_DSL_DIALECT + catalog, dialect);
+        getStore(context).put(P_DSL_CONTEXT + catalog, dslContext);
     }
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
-        return DSLContext.class.equals(type) || SQLDialect.class.equals(type);
+        final String catalog = getContextCatalog(extensionContext);
+
+        return (DSLContext.class.equals(type) || SQLDialect.class.equals(type))
+                && catalog.equals(getCatalogForParameter(parameterContext, extensionContext));
+    }
+
+    private String getCatalogForParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
+        return parameterContext.findAnnotation(Named.class)
+                .map(Named::value)
+                .orElseGet(() -> getContextCatalog(extensionContext));
+    }
+
+    private String getContextCatalog(ExtensionContext context) {
+        return Objects.requireNonNull(wDs.getCatalog(context), "Catalog not found in context Store !");
     }
 
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
+        final String catalog = getCatalogForParameter(parameterContext, extensionContext);
         if (DSLContext.class.equals(type)) {
-            return getStore(extensionContext).get(P_DSL_CONTEXT);
+            return getStore(extensionContext).get(P_DSL_CONTEXT + catalog);
 
         } else if (SQLDialect.class.equals(type)) {
-            return getStore(extensionContext).get(P_DSL_DIALECT);
+            return getStore(extensionContext).get(P_DSL_DIALECT + catalog);
         }
 
         throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
 
+    DatasourceExtension getDatasourceExtension() {
+        return this.wDs;
+    }
+
     public DSLContext getDslContext(ExtensionContext context) {
-        return getStore(context).get(P_DSL_CONTEXT, DSLContext.class);
+        final String catalog = getContextCatalog(context);
+        return getStore(context).get(P_DSL_CONTEXT + catalog, DSLContext.class);
     }
 
     private Store getStore(ExtensionContext context) {

@@ -1,6 +1,7 @@
 package fr.irun.testy.jooq;
 
 import fr.irun.testy.jooq.annotations.DbCatalogName;
+import fr.irun.testy.jooq.model.DatabaseTraceLevel;
 import org.h2.jdbcx.JdbcDataSource;
 import org.h2.tools.Server;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Named;
 import javax.sql.DataSource;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -52,24 +54,27 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     private static final Logger LOGGER = LoggerFactory.getLogger(WithInMemoryDatasource.class);
     private static final TimeZone TZ_UTC = TimeZone.getTimeZone("UTC");
 
-    private static final String P_DATASOUCE = "datasource";
+    private static final String P_DATASOUCE = "datasource_";
     private static final String P_TCP_SERVER = "tcpServer";
-    private static final String P_CATALOG = "catalog";
+    private static final String P_CATALOG = "catalog_";
 
     private final String catalog;
     private final boolean withTcpServer;
     private final boolean withReferentialIntegrity;
+    private final DatabaseTraceLevel traceLevel;
 
     public WithInMemoryDatasource() {
         this.catalog = generateRandomCatalogName();
         this.withTcpServer = false;
         this.withReferentialIntegrity = true;
+        this.traceLevel = DatabaseTraceLevel.OFF;
     }
 
-    private WithInMemoryDatasource(String catalog, boolean withTcpServer, boolean withReferentialIntegrity) {
+    private WithInMemoryDatasource(String catalog, boolean withTcpServer, boolean withReferentialIntegrity, DatabaseTraceLevel traceLevel) {
         this.catalog = Objects.requireNonNull(catalog);
         this.withTcpServer = withTcpServer;
         this.withReferentialIntegrity = withReferentialIntegrity;
+        this.traceLevel = traceLevel;
     }
 
     @Override
@@ -80,7 +85,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         JdbcDataSource ds = new JdbcDataSource();
         String databaseUrl = "jdbc:h2:mem:" + catalog + ";"
                 + "MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;"
-                // + "TRACE_LEVEL_SYSTEM_OUT=3;"
+                + "TRACE_LEVEL_SYSTEM_OUT=" + traceLevel.levelValue + ";"
                 + "INIT=CREATE SCHEMA IF NOT EXISTS " + catalog + "\\; "
                 + "SET SCHEMA " + catalog + "\\; "
                 + "SET REFERENTIAL_INTEGRITY " + Boolean.toString(withReferentialIntegrity).toUpperCase();
@@ -92,18 +97,18 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
             store.put(P_TCP_SERVER, h2TcpServer);
         }
 
-        store.put(P_DATASOUCE, ds);
-        store.put(P_CATALOG, catalog);
+        store.put(P_DATASOUCE + catalog, ds);
+        store.put(P_CATALOG + catalog, catalog);
     }
 
     @Override
     public String getCatalog(ExtensionContext context) {
-        return getStore(context).get(P_CATALOG, String.class);
+        return getStore(context).get(P_CATALOG + catalog, String.class);
     }
 
     @Override
     public DataSource getDataSource(ExtensionContext context) {
-        return getStore(context).get(P_DATASOUCE, DataSource.class);
+        return getStore(context).get(P_DATASOUCE + catalog, DataSource.class);
     }
 
     @Override
@@ -119,25 +124,31 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
         if (DataSource.class.equals(type)) {
-            return true;
+            return catalog.equals(getCatalogForParameter(parameterContext));
         } else if (Server.class.equals(type)) {
-            return true;
+            return catalog.equals(getCatalogForParameter(parameterContext));
         } else {
             return String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class);
         }
     }
 
+    private String getCatalogForParameter(ParameterContext parameterContext) {
+        return parameterContext.findAnnotation(Named.class)
+                .map(Named::value)
+                .orElse(catalog);
+    }
+
+
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
         if (DataSource.class.equals(type)) {
-            return getStore(extensionContext).get(P_DATASOUCE, DataSource.class);
+            return getStore(extensionContext).get(P_DATASOUCE + getCatalogForParameter(parameterContext), DataSource.class);
         } else if (Server.class.equals(type)) {
             return getStore(extensionContext).get(P_TCP_SERVER, Server.class);
         } else if (String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class)) {
-            return getStore(extensionContext).get(P_CATALOG);
+            return getStore(extensionContext).get(P_CATALOG + getCatalogForParameter(parameterContext));
         }
-
         throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
 
@@ -159,6 +170,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
         private String catalog = generateRandomCatalogName();
         private boolean withTcpServer = false;
         private boolean withReferentialIntegrity = true;
+        private DatabaseTraceLevel traceLevel = DatabaseTraceLevel.OFF;
 
         public WithInMemoryDatasourceBuilder setCatalog(String catalog) {
             this.catalog = catalog;
@@ -175,8 +187,13 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
             return this;
         }
 
+        public WithInMemoryDatasourceBuilder setTraceLevel(DatabaseTraceLevel traceLevel) {
+            this.traceLevel = traceLevel;
+            return this;
+        }
+
         public WithInMemoryDatasource build() {
-            return new WithInMemoryDatasource(this.catalog, this.withTcpServer, this.withReferentialIntegrity);
+            return new WithInMemoryDatasource(this.catalog, this.withTcpServer, this.withReferentialIntegrity, this.traceLevel);
         }
     }
 }
