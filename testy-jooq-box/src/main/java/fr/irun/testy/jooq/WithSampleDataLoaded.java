@@ -22,7 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
-    private static final String P_TRACKER = "sampleTracker";
+    private static final String P_TRACKER = "sampleTracker_";
 
     private final WithDslContext wDsl;
 
@@ -35,14 +35,16 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
 
     @Override
     public void beforeAll(ExtensionContext context) {
-        getStore(context).put(P_TRACKER, new Tracker());
+        final String catalog = getContextCatalog(context);
+        getStore(context).put(P_TRACKER + catalog, new Tracker());
         DSLContext dslContext = wDsl.getDslContext(context);
         dslContext.attach(records);
     }
 
     @Override
     public void beforeEach(ExtensionContext context) {
-        Tracker tracker = getStore(context).get(P_TRACKER, Tracker.class);
+        final String catalog = getContextCatalog(context);
+        Tracker tracker = getStore(context).get(P_TRACKER + catalog, Tracker.class);
         if (tracker == null) {
             throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
         }
@@ -64,16 +66,17 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
     }
 
     private ExtensionContext.Store getStore(ExtensionContext context) {
-        final String catalog = Objects.requireNonNull(wDsl.getDatasourceExtension().getCatalog(context),
-                "Catalog not found in context Store !");
-        return context.getStore(ExtensionContext.Namespace.create(getClass().getName(), catalog));
+        return context.getStore(ExtensionContext.Namespace.create(getClass().getName(), getContextCatalog(context)));
+    }
+
+    private String getContextCatalog(ExtensionContext context) {
+        return Objects.requireNonNull(wDsl.getDatasourceExtension().getCatalog(context), "Catalog not found in context Store !");
     }
 
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
-        final String catalog = Objects.requireNonNull(wDsl.getDatasourceExtension().getCatalog(extensionContext),
-                "Catalog not found in context Store !");
+        final String catalog = getContextCatalog(extensionContext);
         return Tracker.class.equals(type) && catalog.equals(getCatalogForParameter(parameterContext, catalog));
     }
 
@@ -86,11 +89,12 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
+        final String catalog = getContextCatalog(extensionContext);
         if (Tracker.class.equals(type)) {
-            return getStore(extensionContext).get(P_TRACKER);
+            return getStore(extensionContext).get(P_TRACKER + catalog);
         }
 
-        throw new NoSuchElementException(P_TRACKER);
+        throw new NoSuchElementException(P_TRACKER + catalog);
     }
 
     public static SampleLoaderBuilder builder(Extension ex) {

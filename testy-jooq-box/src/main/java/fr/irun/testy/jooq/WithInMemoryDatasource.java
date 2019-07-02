@@ -54,9 +54,9 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     private static final Logger LOGGER = LoggerFactory.getLogger(WithInMemoryDatasource.class);
     private static final TimeZone TZ_UTC = TimeZone.getTimeZone("UTC");
 
-    private static final String P_DATASOUCE = "datasource";
+    private static final String P_DATASOUCE = "datasource_";
     private static final String P_TCP_SERVER = "tcpServer";
-    private static final String P_CATALOG = "catalog";
+    private static final String P_CATALOG = "catalog_";
 
     private final String catalog;
     private final boolean withTcpServer;
@@ -97,18 +97,18 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
             store.put(P_TCP_SERVER, h2TcpServer);
         }
 
-        store.put(P_DATASOUCE, ds);
-        store.put(P_CATALOG, catalog);
+        store.put(P_DATASOUCE + catalog, ds);
+        store.put(P_CATALOG + catalog, catalog);
     }
 
     @Override
     public String getCatalog(ExtensionContext context) {
-        return getStore(context).get(P_CATALOG, String.class);
+        return getStore(context).get(P_CATALOG + catalog, String.class);
     }
 
     @Override
     public DataSource getDataSource(ExtensionContext context) {
-        return getStore(context).get(P_DATASOUCE, DataSource.class);
+        return getStore(context).get(P_DATASOUCE + catalog, DataSource.class);
     }
 
     @Override
@@ -143,11 +143,11 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> type = parameterContext.getParameter().getType();
         if (DataSource.class.equals(type)) {
-            return getStore(extensionContext).get(P_DATASOUCE, DataSource.class);
+            return getStore(extensionContext).get(P_DATASOUCE + getCatalogForParameter(parameterContext), DataSource.class);
         } else if (Server.class.equals(type)) {
             return getStore(extensionContext).get(P_TCP_SERVER, Server.class);
         } else if (String.class.equals(type) && parameterContext.isAnnotated(DbCatalogName.class)) {
-            return getStore(extensionContext).get(P_CATALOG);
+            return getStore(extensionContext).get(P_CATALOG + getCatalogForParameter(parameterContext));
         }
         throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
     }
@@ -159,7 +159,7 @@ public class WithInMemoryDatasource implements BeforeAllCallback, AfterAllCallba
     }
 
     private Store getStore(ExtensionContext context) {
-        return context.getStore(Namespace.create(getClass().getName(), catalog));
+        return context.getStore(Namespace.create(getClass().getName()));
     }
 
     public static WithInMemoryDatasourceBuilder builder() {
