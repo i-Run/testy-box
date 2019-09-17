@@ -4,17 +4,17 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>rocket-parent</artifactId>
-        <version>3</version>
+        <version>4</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
-    <version>1.1.2</version>
+    <version>1.1.3</version>
     <packaging>pom</packaging>
     <scm>
         <connection>scm:git:git@gitlab.i-run.fr:nora/rocket/testy-box.git</connection>
         <developerConnection>scm:git:git@gitlab.i-run.fr:nora/rocket/testy-box.git</developerConnection>
         <url>https://gitlab.i-run.fr/nora/rocket/testy-box</url>
-      <tag>1.1.2</tag>
+      <tag>1.1.3</tag>
   </scm>
 
     <modules>

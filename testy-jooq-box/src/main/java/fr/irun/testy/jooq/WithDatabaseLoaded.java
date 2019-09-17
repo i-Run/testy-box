@@ -9,7 +9,7 @@ import javax.sql.DataSource;
 import java.util.Objects;
 
 public final class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCallback {
-    private static final String P_LOADED = "dbLoaded";
+    private static final String P_LOADED = "dbLoaded_";
 
     private final DatasourceExtension wDatasource;
 
@@ -19,8 +19,7 @@ public final class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCa
 
     @Override
     public void beforeAll(ExtensionContext context) {
-        String catalog = Objects.requireNonNull(wDatasource.getCatalog(context),
-                "Catalog not found in context Store !");
+        String catalog = getContextCatalog(context);
         DataSource dataSource = Objects.requireNonNull(wDatasource.getDataSource(context),
                 "DataSource not found in context Store !");
 
@@ -33,18 +32,23 @@ public final class WithDatabaseLoaded implements BeforeAllCallback, BeforeEachCa
         flyway.clean();
         flyway.migrate();
 
-        getStore(context).put(P_LOADED, true);
+        getStore(context).put(P_LOADED + catalog, true);
     }
 
     @Override
     public void beforeEach(ExtensionContext context) {
-        if (getStore(context).get(P_LOADED) == null) {
+        String catalog = getContextCatalog(context);
+        if (getStore(context).get(P_LOADED + catalog) == null) {
             throw new IllegalStateException(getClass().getName() + " must be static and package-protected !");
         }
     }
 
     private ExtensionContext.Store getStore(ExtensionContext context) {
         return context.getStore(ExtensionContext.Namespace.create(getClass().getName()));
+    }
+
+    private String getContextCatalog(ExtensionContext context) {
+        return Objects.requireNonNull(wDatasource.getCatalog(context), "Catalog not found in context Store !");
     }
 
     public static WithDatabaseLoadedBuilder builder() {

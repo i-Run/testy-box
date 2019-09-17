@@ -23,7 +23,7 @@ stages:
 maven:build:
   stage: build
   before_script:
-    - find ${CI_PROJECT_DIR}/.m2/repository -type f -name "*SNAPSHOT*" -delete || true
+    - find "${CI_PROJECT_DIR}/.m2/repository" -type f -name "*SNAPSHOT*" -delete || true
     - .gitlab/install-deps.sh
   script:
     - mvn ${MAVEN_CLI_OPTS} clean install -DskipTests
@@ -110,12 +110,12 @@ maven:deploy:
     - develop
     - master
 
-javadoc:deploy:
+documentation:deploy:
   stage: notify
   allow_failure: true
   cache: {}
   script: 
-    - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=develop "${CI_API_V4_URL}/projects/65/trigger/pipeline"
+    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=develop "${CI_API_V4_URL}/projects/149/trigger/pipeline"
   only:
     - develop
 
