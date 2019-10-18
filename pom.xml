@@ -4,7 +4,7 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>rocket-parent</artifactId>
-        <version>4</version>
+        <version>5-SNAPSHOT</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
@@ -21,6 +21,7 @@
         <module>testy-mongo-box</module>
         <module>testy-core-box</module>
         <module>testy-jooq-box</module>
+        <module>testy-beat-box</module>
     </modules>
 
     <properties>
