@@ -8,7 +8,6 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
-import fr.irun.review.api.model.ReviewResultMessage;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -41,6 +40,7 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
     private String queueName;
     private String exchangeQueueName;
     private String replyQueueName;
+    private Object replyMessage;
 
     public WithRabbitListenerMock() {
     }
@@ -114,7 +114,7 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
                                 "",
                                 properties.getReplyTo(),
                                 new AMQP.BasicProperties.Builder().correlationId(properties.getCorrelationId()).build(),
-                                objectMapper.writeValueAsBytes(ReviewResultMessage.builder().jobSuccess(true).build()));
+                                objectMapper.writeValueAsBytes(replyMessage));
                     }
                 });
         return messages;
@@ -184,6 +184,8 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
         private String queueName;
         private String exchangeQueueName;
         private String replyQueueName;
+        private Object replyMessage;
+
 
         /**
          * Declare the queues and exchange for rabbit communication
@@ -210,6 +212,17 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
         }
 
         /**
+         * Declare the message to send as reply for rabbit communication
+         *
+         * @param replyMessage The message used for reply
+         * @return the builder
+         */
+        public WithRabbitMockBuilder declareReplyMessage(Object replyMessage) {
+            this.replyMessage = replyMessage;
+            return this;
+        }
+
+        /**
          * Build the Object Mapper junit extension
          *
          * @return The extension
@@ -224,6 +237,9 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
             } else {
                 withRabbitListenerMock.replyQueueName = this.replyQueueName;
             }
+
+            withRabbitListenerMock.replyMessage = this.replyMessage;
+
             return withRabbitListenerMock;
         }
     }

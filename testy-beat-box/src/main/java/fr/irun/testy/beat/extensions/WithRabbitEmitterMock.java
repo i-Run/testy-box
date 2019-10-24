@@ -9,7 +9,6 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Delivery;
 import fr.irun.hexamon.api.ports.IdGenerator;
 import fr.irun.hexamon.domain.entity.InstantIdGenerator;
-import fr.irun.review.api.model.ReviewResultMessage;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -108,7 +107,7 @@ public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallb
      * @param senderOptions The options used to send message
      * @return the result of sending ReviewResultMessage
      */
-    public Mono<ReviewResultMessage> emitWithReply(Object message, SenderOptions senderOptions) {
+    public Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions) {
         this.message = message;
         return Mono.using(() -> RabbitFlux.createSender(senderOptions),
                 this::processEmission,
@@ -116,7 +115,7 @@ public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallb
         );
     }
 
-    private Mono<ReviewResultMessage> processEmission(Sender sender) {
+    private Mono<Delivery> processEmission(Sender sender) {
         return Mono.just(message)
                 .flatMap(message -> {
                     IdGenerator idGenerator = new InstantIdGenerator();
@@ -132,8 +131,7 @@ public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallb
                                             rpcClient, e.getClass(), e.getLocalizedMessage()));
                     rpcClient.close();
                     return rpcMono;
-                })
-                .flatMap(delivery -> Mono.fromCallable(() -> objectMapper.readValue(delivery.getBody(), ReviewResultMessage.class)));
+                });
     }
 
     private Mono<RpcClient.RpcRequest> buildRpcRequest(Object message) {
