@@ -1,5 +1,6 @@
 package fr.irun.testy.beat.extensions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fridujo.rabbitmq.mock.MockConnectionFactory;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BuiltinExchangeType;
@@ -7,6 +8,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import fr.irun.review.api.model.ReviewResultMessage;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -21,14 +23,13 @@ import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
  */
-public class WithRabbitMock implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
+public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
     private static final String P_RABBIT_RECEIVER_OPT = "rabbit-receiver-opt";
@@ -41,7 +42,7 @@ public class WithRabbitMock implements BeforeAllCallback, BeforeEachCallback, Pa
     private String exchangeQueueName;
     private String replyQueueName;
 
-    public WithRabbitMock() {
+    public WithRabbitListenerMock() {
     }
 
     public static WithRabbitMockBuilder builder() {
@@ -53,19 +54,23 @@ public class WithRabbitMock implements BeforeAllCallback, BeforeEachCallback, Pa
         Connection conn = new MockConnectionFactory().newConnection();
         Channel channel = conn.createChannel();
 
-        declareAndBindQueues(channel);
+        if (queueName != null && exchangeQueueName != null) {
+            declareAndBindQueues(channel);
+        }
 
         SenderOptions senderOptions = declareSenderOptions(conn, channel);
 
         ReceiverOptions receiverOptions = declareReceiverOptions(conn);
 
-        List<String> messages = declareConsumer(channel);
-
         Store store = getStore(context);
         store.put(P_RABBIT_CHANNEL, channel);
         store.put(P_RABBIT_SENDER_OPT, senderOptions);
         store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
-        store.put(P_RABBIT_MESSAGE_RECEIVED, messages);
+
+        if (queueName != null && exchangeQueueName != null) {
+            List<String> messages = declareConsumer(channel);
+            store.put(P_RABBIT_MESSAGE_RECEIVED, messages);
+        }
     }
 
     @Override
@@ -104,11 +109,12 @@ public class WithRabbitMock implements BeforeAllCallback, BeforeEachCallback, Pa
                                                AMQP.BasicProperties properties,
                                                byte[] body) throws IOException {
                         messages.add(new String(body));
+                        ObjectMapper objectMapper = new ObjectMapper();
                         channel.basicPublish(
                                 "",
                                 properties.getReplyTo(),
                                 new AMQP.BasicProperties.Builder().correlationId(properties.getCorrelationId()).build(),
-                                (String.format("Msg received: %s.", new String(body)).getBytes(StandardCharsets.UTF_8)));
+                                objectMapper.writeValueAsBytes(ReviewResultMessage.builder().jobSuccess(true).build()));
                     }
                 });
         return messages;
@@ -208,17 +214,17 @@ public class WithRabbitMock implements BeforeAllCallback, BeforeEachCallback, Pa
          *
          * @return The extension
          */
-        public WithRabbitMock build() {
-            WithRabbitMock withRabbitMock = new WithRabbitMock();
-            withRabbitMock.queueName = this.queueName;
-            withRabbitMock.exchangeQueueName = this.exchangeQueueName;
+        public WithRabbitListenerMock build() {
+            WithRabbitListenerMock withRabbitListenerMock = new WithRabbitListenerMock();
+            withRabbitListenerMock.queueName = this.queueName;
+            withRabbitListenerMock.exchangeQueueName = this.exchangeQueueName;
 
             if (replyQueueName == null || replyQueueName.isEmpty()) {
-                withRabbitMock.replyQueueName = DEFAULT_RABBIT_REPLY_QUEUE_NAME;
+                withRabbitListenerMock.replyQueueName = DEFAULT_RABBIT_REPLY_QUEUE_NAME;
             } else {
-                withRabbitMock.replyQueueName = this.replyQueueName;
+                withRabbitListenerMock.replyQueueName = this.replyQueueName;
             }
-            return withRabbitMock;
+            return withRabbitListenerMock;
         }
     }
 }
