@@ -8,6 +8,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import fr.irun.hexamon.api.queue.RocketDelivery;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -68,7 +69,7 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
         store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
 
         if (queueName != null && exchangeQueueName != null) {
-            List<String> messages = declareConsumer(channel);
+            List<RocketDelivery<byte[]>> messages = declareConsumer(channel);
             store.put(P_RABBIT_MESSAGE_RECEIVED, messages);
         }
     }
@@ -99,8 +100,8 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
         channel.queueDeclare(replyQueueName, false, false, true, null);
     }
 
-    private List<String> declareConsumer(Channel channel) throws IOException {
-        List<String> messages = new ArrayList<>();
+    private List<RocketDelivery<byte[]>> declareConsumer(Channel channel) throws IOException {
+        List<RocketDelivery<byte[]>> messages = new ArrayList<>();
         channel.basicConsume(queueName, true,
                 new DefaultConsumer(channel) {
                     @Override
@@ -108,7 +109,7 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
                                                Envelope envelope,
                                                AMQP.BasicProperties properties,
                                                byte[] body) throws IOException {
-                        messages.add(new String(body));
+                        messages.add(new RocketDelivery<>(envelope, properties, body));
                         ObjectMapper objectMapper = new ObjectMapper();
                         channel.basicPublish(
                                 "",
