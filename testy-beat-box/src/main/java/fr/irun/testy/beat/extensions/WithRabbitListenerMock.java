@@ -9,13 +9,14 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import fr.irun.hexamon.api.queue.RocketDelivery;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -29,7 +30,8 @@ import java.util.List;
 /**
  * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
  */
-public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
+public class WithRabbitListenerMock implements BeforeEachCallback, ParameterResolver {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WithRabbitListenerMock.class);
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
     private static final String P_RABBIT_RECEIVER_OPT = "rabbit-receiver-opt";
@@ -51,7 +53,7 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
     }
 
     @Override
-    public void beforeAll(ExtensionContext context) throws IOException {
+    public void beforeEach(ExtensionContext context) throws IOException {
         Connection conn = new MockConnectionFactory().newConnection();
         Channel channel = conn.createChannel();
 
@@ -67,16 +69,6 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
         store.put(P_RABBIT_CHANNEL, channel);
         store.put(P_RABBIT_SENDER_OPT, senderOptions);
         store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
-
-        if (queueName != null && exchangeQueueName != null) {
-            List<RocketDelivery<byte[]>> messages = declareConsumer(channel);
-            store.put(P_RABBIT_MESSAGE_RECEIVED, messages);
-        }
-    }
-
-    @Override
-    public void beforeEach(ExtensionContext context) throws IOException {
-        beforeAll(context);
     }
 
     private ReceiverOptions declareReceiverOptions(Connection conn) {
@@ -100,25 +92,29 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
         channel.queueDeclare(replyQueueName, false, false, true, null);
     }
 
-    private List<RocketDelivery<byte[]>> declareConsumer(Channel channel) throws IOException {
+    private void declareConsumer(Channel channel, ExtensionContext extensionContext) {
         List<RocketDelivery<byte[]>> messages = new ArrayList<>();
-        channel.basicConsume(queueName, true,
-                new DefaultConsumer(channel) {
-                    @Override
-                    public void handleDelivery(String consumerTag,
-                                               Envelope envelope,
-                                               AMQP.BasicProperties properties,
-                                               byte[] body) throws IOException {
-                        messages.add(new RocketDelivery<>(envelope, properties, body));
-                        ObjectMapper objectMapper = new ObjectMapper();
-                        channel.basicPublish(
-                                "",
-                                properties.getReplyTo(),
-                                new AMQP.BasicProperties.Builder().correlationId(properties.getCorrelationId()).build(),
-                                objectMapper.writeValueAsBytes(replyMessage));
-                    }
-                });
-        return messages;
+        try {
+            channel.basicConsume(queueName, true,
+                    new DefaultConsumer(channel) {
+                        @Override
+                        public void handleDelivery(String consumerTag,
+                                                   Envelope envelope,
+                                                   AMQP.BasicProperties properties,
+                                                   byte[] body) throws IOException {
+                            messages.add(new RocketDelivery<>(envelope, properties, body));
+                            ObjectMapper objectMapper = new ObjectMapper();
+                            channel.basicPublish(
+                                    "",
+                                    properties.getReplyTo(),
+                                    new AMQP.BasicProperties.Builder().correlationId(properties.getCorrelationId()).build(),
+                                    objectMapper.writeValueAsBytes(replyMessage));
+                        }
+                    });
+        } catch (IOException e) {
+            LOGGER.error("Failure during message reception", e);
+        }
+        getStore(extensionContext).put(P_RABBIT_MESSAGE_RECEIVED, messages);
     }
 
     @Override
@@ -143,6 +139,10 @@ public class WithRabbitListenerMock implements BeforeAllCallback, BeforeEachCall
             return getStore(extensionContext).get(P_RABBIT_RECEIVER_OPT);
         }
         if (List.class.equals(aClass)) {
+            if (queueName != null && exchangeQueueName != null) {
+                Channel channel = (Channel) getStore(extensionContext).get(P_RABBIT_CHANNEL);
+                declareConsumer(channel, extensionContext);
+            }
             return getStore(extensionContext).get(P_RABBIT_MESSAGE_RECEIVED);
         }
         throw new ParameterResolutionException("Unable to resolve parameter for Rabbit Channel !");

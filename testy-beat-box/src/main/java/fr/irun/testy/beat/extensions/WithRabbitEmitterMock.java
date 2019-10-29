@@ -9,7 +9,6 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Delivery;
 import fr.irun.hexamon.api.ports.IdGenerator;
 import fr.irun.hexamon.domain.entity.InstantIdGenerator;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
@@ -28,11 +27,12 @@ import reactor.rabbitmq.Sender;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
+import java.time.Duration;
 
 /**
  * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
  */
-public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
+public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithRabbitEmitterMock.class);
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
@@ -41,6 +41,7 @@ public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallb
     private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
+    private static final int TIMEOUT_DURATION = 1;
     private static ObjectMapper objectMapper;
     private String queueName;
     private String exchangeQueueName;
@@ -56,7 +57,7 @@ public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallb
     }
 
     @Override
-    public void beforeAll(ExtensionContext context) throws IOException {
+    public void beforeEach(ExtensionContext context) throws IOException {
         Connection conn = new MockConnectionFactory().newConnection();
         Channel channel = conn.createChannel();
 
@@ -72,11 +73,6 @@ public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallb
         store.put(P_RABBIT_CHANNEL, channel);
         store.put(P_RABBIT_SENDER_OPT, senderOptions);
         store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
-    }
-
-    @Override
-    public void beforeEach(ExtensionContext context) throws IOException {
-        beforeAll(context);
     }
 
     private ReceiverOptions declareReceiverOptions(Connection conn) {
@@ -126,6 +122,7 @@ public class WithRabbitEmitterMock implements BeforeAllCallback, BeforeEachCallb
                     );
 
                     Mono<Delivery> rpcMono = rpcClient.rpc(buildRpcRequest(message))
+                            .timeout(Duration.ofSeconds(TIMEOUT_DURATION))
                             .doOnError(e ->
                                     LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
                                             rpcClient, e.getClass(), e.getLocalizedMessage()));
