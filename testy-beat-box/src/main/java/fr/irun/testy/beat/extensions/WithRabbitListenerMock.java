@@ -7,8 +7,8 @@ import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DefaultConsumer;
+import com.rabbitmq.client.Delivery;
 import com.rabbitmq.client.Envelope;
-import fr.irun.hexamon.api.queue.RocketDelivery;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
@@ -93,7 +93,7 @@ public class WithRabbitListenerMock implements BeforeEachCallback, ParameterReso
     }
 
     private void declareConsumer(Channel channel, ExtensionContext extensionContext) {
-        List<RocketDelivery<byte[]>> messages = new ArrayList<>();
+        List<Delivery> messages = new ArrayList<>();
         try {
             channel.basicConsume(queueName, true,
                     new DefaultConsumer(channel) {
@@ -102,7 +102,7 @@ public class WithRabbitListenerMock implements BeforeEachCallback, ParameterReso
                                                    Envelope envelope,
                                                    AMQP.BasicProperties properties,
                                                    byte[] body) throws IOException {
-                            messages.add(new RocketDelivery<>(envelope, properties, body));
+                            messages.add(new Delivery(envelope, properties, body));
                             ObjectMapper objectMapper = new ObjectMapper();
                             channel.basicPublish(
                                     "",

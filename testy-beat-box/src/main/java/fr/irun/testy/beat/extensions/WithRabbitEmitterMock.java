@@ -7,8 +7,6 @@ import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Delivery;
-import fr.irun.hexamon.api.ports.IdGenerator;
-import fr.irun.hexamon.domain.entity.InstantIdGenerator;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
@@ -28,6 +26,7 @@ import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.function.Supplier;
 
 /**
  * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
@@ -47,6 +46,7 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
     private String exchangeQueueName;
     private String replyQueueName;
     private Object message;
+    private Supplier<String> idGenerator;
 
     public WithRabbitEmitterMock() {
         objectMapper = new ObjectMapper();
@@ -114,11 +114,10 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
     private Mono<Delivery> processEmission(Sender sender) {
         return Mono.just(message)
                 .flatMap(message -> {
-                    IdGenerator idGenerator = new InstantIdGenerator();
                     final RpcClient rpcClient = sender.rpcClient(
                             exchangeQueueName,
                             "",
-                            idGenerator::generateId
+                            idGenerator
                     );
 
                     Mono<Delivery> rpcMono = rpcClient.rpc(buildRpcRequest(message))
@@ -198,6 +197,7 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
         private String queueName;
         private String exchangeQueueName;
         private String replyQueueName;
+        private Supplier<String> idGenerator;
 
         /**
          * Declare the queues and exchange for rabbit communication
@@ -224,6 +224,17 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
         }
 
         /**
+         * Declare a supplier to generate ids.
+         *
+         * @param idGenerator Supplier requested
+         * @return the builder
+         */
+        public WithRabbitMockBuilder declareSupplier(Supplier<String> idGenerator) {
+            this.idGenerator = idGenerator;
+            return this;
+        }
+
+        /**
          * Build the Object Mapper junit extension
          *
          * @return The extension
@@ -238,6 +249,8 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
             } else {
                 withRabbitListenerMock.replyQueueName = this.replyQueueName;
             }
+
+            withRabbitListenerMock.idGenerator = this.idGenerator;
 
             return withRabbitListenerMock;
         }
