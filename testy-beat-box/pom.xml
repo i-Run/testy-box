@@ -13,7 +13,7 @@
     <properties>
         <hexamon.version>1.4.0-SNAPSHOT</hexamon.version>
         <jackson.version>2.9.8</jackson.version>
-        <review.version>1.3.0-SNAPSHOT</review.version>
+        <rabbitmq-mock.version>1.0.12</rabbitmq-mock.version>
     </properties>
 
     <dependencies>
@@ -37,7 +37,7 @@
         <dependency>
             <groupId>com.github.fridujo</groupId>
             <artifactId>rabbitmq-mock</artifactId>
-            <scope>compile</scope>
+            <version>${rabbitmq-mock.version}</version>
         </dependency>
         <dependency>
             <groupId>fr.irun</groupId>
