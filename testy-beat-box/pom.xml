@@ -57,11 +57,5 @@
             <version>${jackson.version}</version>
             <scope>compile</scope>
         </dependency>
-        <dependency>
-            <groupId>fr.irun</groupId>
-            <artifactId>review-api</artifactId>
-            <version>${review.version}</version>
-            <scope>compile</scope>
-        </dependency>
     </dependencies>
 </project>
