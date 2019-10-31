@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
  */
-public class WithRabbitListenerMock implements BeforeEachCallback, ParameterResolver {
+public final class WithRabbitListenerMock implements BeforeEachCallback, ParameterResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithRabbitListenerMock.class);
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
