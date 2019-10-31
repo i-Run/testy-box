@@ -41,14 +41,16 @@ public final class WithRabbitEmitterMock implements BeforeEachCallback, Paramete
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
     private static final int TIMEOUT_DURATION = 1;
-    private ObjectMapper objectMapper;
-    private String queueName;
-    private String exchangeQueueName;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final String queueName;
+    private final String exchangeQueueName;
+    private final Supplier<String> idGenerator;
     private Object message;
-    private Supplier<String> idGenerator;
 
-    private WithRabbitEmitterMock() {
-        objectMapper = new ObjectMapper();
+    private WithRabbitEmitterMock(String queueName, String exchangeQueueName, Supplier<String> idGenerator) {
+        this.queueName = queueName;
+        this.exchangeQueueName = exchangeQueueName;
+        this.idGenerator = idGenerator;
     }
 
     public static WithRabbitMockBuilder builder() {
@@ -130,7 +132,7 @@ public final class WithRabbitEmitterMock implements BeforeEachCallback, Paramete
     }
 
     private Mono<RpcClient.RpcRequest> buildRpcRequest(Object message) {
-        return Mono.fromCallable(() -> buildRpcRequestFromContent(objectMapper.writeValueAsBytes(message)));
+        return Mono.fromCallable(() -> buildRpcRequestFromContent(OBJECT_MAPPER.writeValueAsBytes(message)));
     }
 
     private RpcClient.RpcRequest buildRpcRequestFromContent(byte[] content) {
@@ -187,7 +189,7 @@ public final class WithRabbitEmitterMock implements BeforeEachCallback, Paramete
      *     {@literal @}RegisterExtension
      *     WithRabbitMock wRabbitMock = WithRabbitMock.builder()
      *             .declareQueueAndExchange("queue-name", "exchange-queue-name")
-     *             .declareReplyQueue("amq.rabbitmq.reply-to")
+     *             .declareSupplier(() -> "ID" + math.random())
      *             .build();
      * </pre>
      */
@@ -227,12 +229,7 @@ public final class WithRabbitEmitterMock implements BeforeEachCallback, Paramete
          * @return The extension
          */
         public WithRabbitEmitterMock build() {
-            WithRabbitEmitterMock withRabbitListenerMock = new WithRabbitEmitterMock();
-            withRabbitListenerMock.queueName = this.queueName;
-            withRabbitListenerMock.exchangeQueueName = this.exchangeQueueName;
-            withRabbitListenerMock.idGenerator = this.idGenerator;
-
-            return withRabbitListenerMock;
+            return new WithRabbitEmitterMock(queueName, exchangeQueueName, idGenerator);
         }
     }
 }

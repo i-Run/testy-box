@@ -40,11 +40,14 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
     private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
-    private String queueName;
-    private String exchangeQueueName;
-    private Object replyMessage;
+    private final String queueName;
+    private final String exchangeQueueName;
+    private final Object replyMessage;
 
-    private WithRabbitListenerMock() {
+    private WithRabbitListenerMock(String queueName, String exchangeQueueName, Object replyMessage) {
+        this.queueName = queueName;
+        this.exchangeQueueName = exchangeQueueName;
+        this.replyMessage = replyMessage;
     }
 
     public static WithRabbitMockBuilder builder() {
@@ -175,7 +178,7 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
      *     {@literal @}RegisterExtension
      *     WithRabbitMock wRabbitMock = WithRabbitMock.builder()
      *             .declareQueueAndExchange("queue-name", "exchange-queue-name")
-     *             .declareReplyQueue("amq.rabbitmq.reply-to")
+     *             .declareReplyMessage("Reception OK. Reply Message !")
      *             .build();
      * </pre>
      */
@@ -184,7 +187,6 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
         private String queueName;
         private String exchangeQueueName;
         private Object replyMessage;
-
 
         /**
          * Declare the queues and exchange for rabbit communication
@@ -216,13 +218,7 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
          * @return The extension
          */
         public WithRabbitListenerMock build() {
-            WithRabbitListenerMock withRabbitListenerMock = new WithRabbitListenerMock();
-            withRabbitListenerMock.queueName = this.queueName;
-            withRabbitListenerMock.exchangeQueueName = this.exchangeQueueName;
-
-            withRabbitListenerMock.replyMessage = this.replyMessage;
-
-            return withRabbitListenerMock;
+            return new WithRabbitListenerMock(queueName, exchangeQueueName, replyMessage);
         }
     }
 }
