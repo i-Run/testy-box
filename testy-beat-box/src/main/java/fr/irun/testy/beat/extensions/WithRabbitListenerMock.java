@@ -42,10 +42,9 @@ public class WithRabbitListenerMock implements BeforeEachCallback, ParameterReso
     private static final Scheduler SCHEDULER = Schedulers.elastic();
     private String queueName;
     private String exchangeQueueName;
-    private String replyQueueName;
     private Object replyMessage;
 
-    public WithRabbitListenerMock() {
+    private WithRabbitListenerMock() {
     }
 
     public static WithRabbitMockBuilder builder() {
@@ -89,7 +88,7 @@ public class WithRabbitListenerMock implements BeforeEachCallback, ParameterReso
         channel.exchangeDeclare(exchangeQueueName, BuiltinExchangeType.DIRECT, false, true, null);
         channel.queueBind(queueName, exchangeQueueName, "");
 
-        channel.queueDeclare(replyQueueName, false, false, true, null);
+        channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, true, null);
     }
 
     private void declareConsumer(Channel channel, ExtensionContext extensionContext) {
@@ -184,7 +183,6 @@ public class WithRabbitListenerMock implements BeforeEachCallback, ParameterReso
 
         private String queueName;
         private String exchangeQueueName;
-        private String replyQueueName;
         private Object replyMessage;
 
 
@@ -198,17 +196,6 @@ public class WithRabbitListenerMock implements BeforeEachCallback, ParameterReso
         public WithRabbitMockBuilder declareQueueAndExchange(String queueName, String exchangeQueueName) {
             this.queueName = queueName;
             this.exchangeQueueName = exchangeQueueName;
-            return this;
-        }
-
-        /**
-         * Declare the queue for reply for rabbit communication
-         *
-         * @param replyQueueName The name of queue for reply
-         * @return the builder
-         */
-        public WithRabbitMockBuilder declareReplyQueue(String replyQueueName) {
-            this.replyQueueName = replyQueueName;
             return this;
         }
 
@@ -232,12 +219,6 @@ public class WithRabbitListenerMock implements BeforeEachCallback, ParameterReso
             WithRabbitListenerMock withRabbitListenerMock = new WithRabbitListenerMock();
             withRabbitListenerMock.queueName = this.queueName;
             withRabbitListenerMock.exchangeQueueName = this.exchangeQueueName;
-
-            if (replyQueueName == null || replyQueueName.isEmpty()) {
-                withRabbitListenerMock.replyQueueName = DEFAULT_RABBIT_REPLY_QUEUE_NAME;
-            } else {
-                withRabbitListenerMock.replyQueueName = this.replyQueueName;
-            }
 
             withRabbitListenerMock.replyMessage = this.replyMessage;
 

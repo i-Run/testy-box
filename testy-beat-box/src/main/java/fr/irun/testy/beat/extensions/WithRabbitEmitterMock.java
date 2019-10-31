@@ -41,13 +41,13 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
     private static final int TIMEOUT_DURATION = 1;
-    private static ObjectMapper objectMapper;
+    private ObjectMapper objectMapper;
     private String queueName;
     private String exchangeQueueName;
     private Object message;
     private Supplier<String> idGenerator;
 
-    public WithRabbitEmitterMock() {
+    private WithRabbitEmitterMock() {
         objectMapper = new ObjectMapper();
     }
 
