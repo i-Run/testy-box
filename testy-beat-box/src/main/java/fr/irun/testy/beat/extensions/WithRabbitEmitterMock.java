@@ -44,7 +44,6 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
     private static ObjectMapper objectMapper;
     private String queueName;
     private String exchangeQueueName;
-    private String replyQueueName;
     private Object message;
     private Supplier<String> idGenerator;
 
@@ -93,7 +92,7 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
         channel.exchangeDeclare(exchangeQueueName, BuiltinExchangeType.DIRECT, false, true, null);
         channel.queueBind(queueName, exchangeQueueName, "");
 
-        channel.queueDeclare(replyQueueName, false, false, true, null);
+        channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, true, null);
     }
 
     /**
@@ -136,7 +135,7 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
 
     private RpcClient.RpcRequest buildRpcRequestFromContent(byte[] content) {
         final AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder()
-                .replyTo(replyQueueName)
+                .replyTo(DEFAULT_RABBIT_REPLY_QUEUE_NAME)
                 .build();
         return new RpcClient.RpcRequest(properties, content);
     }
@@ -196,7 +195,6 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
 
         private String queueName;
         private String exchangeQueueName;
-        private String replyQueueName;
         private Supplier<String> idGenerator;
 
         /**
@@ -209,17 +207,6 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
         public WithRabbitMockBuilder declareQueueAndExchange(String queueName, String exchangeQueueName) {
             this.queueName = queueName;
             this.exchangeQueueName = exchangeQueueName;
-            return this;
-        }
-
-        /**
-         * Declare the queue for reply for rabbit communication
-         *
-         * @param replyQueueName The name of queue for reply
-         * @return the builder
-         */
-        public WithRabbitMockBuilder declareReplyQueue(String replyQueueName) {
-            this.replyQueueName = replyQueueName;
             return this;
         }
 
@@ -243,13 +230,6 @@ public class WithRabbitEmitterMock implements BeforeEachCallback, ParameterResol
             WithRabbitEmitterMock withRabbitListenerMock = new WithRabbitEmitterMock();
             withRabbitListenerMock.queueName = this.queueName;
             withRabbitListenerMock.exchangeQueueName = this.exchangeQueueName;
-
-            if (replyQueueName == null || replyQueueName.isEmpty()) {
-                withRabbitListenerMock.replyQueueName = DEFAULT_RABBIT_REPLY_QUEUE_NAME;
-            } else {
-                withRabbitListenerMock.replyQueueName = this.replyQueueName;
-            }
-
             withRabbitListenerMock.idGenerator = this.idGenerator;
 
             return withRabbitListenerMock;
