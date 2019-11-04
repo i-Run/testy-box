@@ -2,6 +2,7 @@ package fr.irun.testy.beat.extensions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fridujo.rabbitmq.mock.MockConnectionFactory;
+import com.google.common.collect.ImmutableList;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
@@ -24,7 +25,6 @@ import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -95,7 +95,7 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
     }
 
     private void declareConsumer(Channel channel, ExtensionContext extensionContext) {
-        List<Delivery> messages = new ArrayList<>();
+        ImmutableList.Builder<Delivery> messages = new ImmutableList.Builder<>();
         try {
             channel.basicConsume(queueName, true,
                     new DefaultConsumer(channel) {
@@ -116,7 +116,7 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
         } catch (IOException e) {
             LOGGER.error("Failure during message reception", e);
         }
-        getStore(extensionContext).put(P_RABBIT_MESSAGE_RECEIVED, messages);
+        getStore(extensionContext).put(P_RABBIT_MESSAGE_RECEIVED, messages.build());
     }
 
     @Override

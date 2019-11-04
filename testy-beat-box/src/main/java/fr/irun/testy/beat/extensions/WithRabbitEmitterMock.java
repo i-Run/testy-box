@@ -189,7 +189,7 @@ public final class WithRabbitEmitterMock implements BeforeEachCallback, Paramete
      *     {@literal @}RegisterExtension
      *     WithRabbitMock wRabbitMock = WithRabbitMock.builder()
      *             .declareQueueAndExchange("queue-name", "exchange-queue-name")
-     *             .declareSupplier(() - "ID" + math.random())
+     *             .declareSupplier(() -&gt; "ID" + math.random())
      *             .build();
      * </pre>
      */

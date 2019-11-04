@@ -27,6 +27,7 @@
     <properties>
         <flapdoodle.version>2.1.1</flapdoodle.version>
         <javax.inject.version>1</javax.inject.version>
+        <rabbitmq-mock.version>1.0.12</rabbitmq-mock.version>
     </properties>
 
     <dependencyManagement>
@@ -47,6 +48,11 @@
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
                 <version>${javax.inject.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.fridujo</groupId>
+                <artifactId>rabbitmq-mock</artifactId>
+                <version>${rabbitmq-mock.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
