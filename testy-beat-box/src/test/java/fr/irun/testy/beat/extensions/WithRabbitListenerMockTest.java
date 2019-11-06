@@ -18,7 +18,7 @@ import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.List;
+import java.util.Queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,11 +38,11 @@ class WithRabbitListenerMockTest {
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    void setUp(Channel channel, SenderOptions sender, ReceiverOptions receiver, List<String> messages) {
+    void setUp(Channel channel, SenderOptions sender, ReceiverOptions receiver, Queue<String> messages) {
         assertThat(channel).isInstanceOf(Channel.class);
         assertThat(sender).isInstanceOf(SenderOptions.class);
         assertThat(receiver).isInstanceOf(ReceiverOptions.class);
-        assertThat(messages).isInstanceOf(List.class);
+        assertThat(messages).isInstanceOf(Queue.class);
         assertThat(channel).isNotNull();
         assertThat(sender).isNotNull();
         assertThat(receiver).isNotNull();
@@ -68,20 +68,22 @@ class WithRabbitListenerMockTest {
     }
 
     @Test
-    void should_inject_receiver(List<String> tested) {
-        assertThat(tested).isInstanceOf(List.class);
+    void should_inject_list(Queue<Delivery> tested) {
+        assertThat(tested).isInstanceOf(Queue.class);
         assertThat(tested).isNotNull();
     }
 
     @Test
-    void should_listen_and_reply(SenderOptions senderOptions, List<Delivery> messages) throws IOException {
+    void should_listen_and_reply(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
         Delivery replyMessage = emitWithReply(MESSAGE_TO_SEND, senderOptions).block();
 
         assert replyMessage != null;
         assertThat(objectMapper.readValue(replyMessage.getBody(), String.class))
                 .isEqualTo(RESULT_OK);
 
-        assertThat(objectMapper.readValue(messages.get(0).getBody(), String.class))
+        assert messages != null;
+        assertThat(messages.isEmpty()).isFalse();
+        assertThat(objectMapper.readValue(messages.remove().getBody(), String.class))
                 .isEqualTo(MESSAGE_TO_SEND);
     }
 

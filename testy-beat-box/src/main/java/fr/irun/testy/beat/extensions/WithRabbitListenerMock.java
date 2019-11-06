@@ -2,7 +2,6 @@ package fr.irun.testy.beat.extensions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fridujo.rabbitmq.mock.MockConnectionFactory;
-import com.google.common.collect.ImmutableList;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
@@ -25,20 +24,19 @@ import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 
 /**
  * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
  */
 public final class WithRabbitListenerMock implements BeforeEachCallback, ParameterResolver {
+    private static final int QUEUE_CAPACITY = 10;
     private static final Logger LOGGER = LoggerFactory.getLogger(WithRabbitListenerMock.class);
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
     private static final String P_RABBIT_RECEIVER_OPT = "rabbit-receiver-opt";
-    private static final String P_RABBIT_MESSAGE_RECEIVED = "rabbit-msg-received";
-
     private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
-
     private static final Scheduler SCHEDULER = Schedulers.elastic();
     private final String queueName;
     private final String exchangeQueueName;
@@ -94,8 +92,7 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
         channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, true, null);
     }
 
-    private void declareConsumer(Channel channel, ExtensionContext extensionContext) {
-        ImmutableList.Builder<Delivery> messages = new ImmutableList.Builder<>();
+    private void declareConsumer(Channel channel, Queue<Delivery> messages) {
         try {
             channel.basicConsume(queueName, true,
                     new DefaultConsumer(channel) {
@@ -104,7 +101,7 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
                                                    Envelope envelope,
                                                    AMQP.BasicProperties properties,
                                                    byte[] body) throws IOException {
-                            messages.add(new Delivery(envelope, properties, body));
+                            messages.offer(new Delivery(envelope, properties, body));
                             ObjectMapper objectMapper = new ObjectMapper();
                             channel.basicPublish(
                                     "",
@@ -116,7 +113,6 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
         } catch (IOException e) {
             LOGGER.error("Failure during message reception", e);
         }
-        getStore(extensionContext).put(P_RABBIT_MESSAGE_RECEIVED, messages.build());
     }
 
     @Override
@@ -125,27 +121,28 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
         return aClass.equals(Channel.class)
                 || aClass.equals(SenderOptions.class)
                 || aClass.equals(ReceiverOptions.class)
-                || aClass.equals(List.class);
+                || aClass.equals(Queue.class);
     }
 
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         Class<?> aClass = parameterContext.getParameter().getType();
         if (Channel.class.equals(aClass)) {
-            return getStore(extensionContext).get(P_RABBIT_CHANNEL);
+            return getRabbitChannel(extensionContext);
         }
         if (SenderOptions.class.equals(aClass)) {
-            return getStore(extensionContext).get(P_RABBIT_SENDER_OPT);
+            return getSenderOptions(extensionContext);
         }
         if (ReceiverOptions.class.equals(aClass)) {
-            return getStore(extensionContext).get(P_RABBIT_RECEIVER_OPT);
+            return getReceiverOptions(extensionContext);
         }
-        if (List.class.equals(aClass)) {
+        if (Queue.class.equals(aClass)) {
+            Queue<Delivery> messages = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
             if (queueName != null && exchangeQueueName != null) {
                 Channel channel = (Channel) getStore(extensionContext).get(P_RABBIT_CHANNEL);
-                declareConsumer(channel, extensionContext);
+                declareConsumer(channel, messages);
             }
-            return getStore(extensionContext).get(P_RABBIT_MESSAGE_RECEIVED);
+            return messages;
         }
         throw new ParameterResolutionException("Unable to resolve parameter for Rabbit Channel !");
     }
@@ -164,10 +161,6 @@ public final class WithRabbitListenerMock implements BeforeEachCallback, Paramet
 
     public ReceiverOptions getReceiverOptions(ExtensionContext context) {
         return getStore(context).get(P_RABBIT_RECEIVER_OPT, ReceiverOptions.class);
-    }
-
-    public List getMessagesReceived(ExtensionContext context) {
-        return getStore(context).get(P_RABBIT_MESSAGE_RECEIVED, List.class);
     }
 
     /**
