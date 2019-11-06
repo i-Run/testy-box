@@ -1,4 +1,4 @@
-image: d.i-run.fr/irun-compiler:20190212.ad9ab9c2
+image: d.i-run.fr/irun-compiler:20190917.f02b5df2
 
 variables:
   #CHAT_WEBHOOK_URL: Must exists in group variables or projet variables
@@ -78,6 +78,7 @@ maven:release:
           -DtagNameFormat="@{version}" \
           -DupdateDependencies=false \
           -DscmCommentPrefix="[maven-release][skip CI] " \
+          -DdevelopmentVersion="$(.gitlab/bumpVersion.sh)" \
         release:perform \
           -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
     - git clone "git@gitlab.i-run.fr:${CI_PROJECT_PATH}.git"
