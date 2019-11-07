@@ -120,12 +120,31 @@ public final class AMQPHelper {
      */
     public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName, Supplier<String> idGenerator) {
         return Mono.using(() -> RabbitFlux.createSender(senderOptions),
-                sender -> AMQPHelper.processEmission(message, sender, exchangeQueueName, idGenerator),
+                sender -> AMQPHelper.processEmission(message, sender, exchangeQueueName, idGenerator, Duration.ofSeconds(TIMEOUT_DURATION)),
                 Sender::close
         );
     }
 
-    private static Mono<Delivery> processEmission(Object messageToSend, Sender sender, String exchangeQueueName, Supplier<String> idGenerator) {
+    /**
+     * Declare a message to send into rabbit communication and send it
+     *
+     * @param message           The rabbit message to send
+     * @param senderOptions     The options used to send message
+     * @param exchangeQueueName The exchange queue name
+     * @param idGenerator       The Supplier used to generate ids
+     * @param timeout           The timeout duration before receiving a reply
+     * @return the result of sending ReviewResultMessage
+     */
+    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName,
+                                               Supplier<String> idGenerator, Duration timeout) {
+        return Mono.using(() -> RabbitFlux.createSender(senderOptions),
+                sender -> AMQPHelper.processEmission(message, sender, exchangeQueueName, idGenerator, timeout),
+                Sender::close
+        );
+    }
+
+    private static Mono<Delivery> processEmission(Object messageToSend, Sender sender, String exchangeQueueName,
+                                                  Supplier<String> idGenerator, Duration timeout) {
         return Mono.just(messageToSend)
                 .flatMap(message -> {
                     final RpcClient rpcClient = sender.rpcClient(
@@ -135,7 +154,7 @@ public final class AMQPHelper {
                     );
 
                     Mono<Delivery> rpcMono = rpcClient.rpc(buildRpcRequest(message))
-                            .timeout(Duration.ofSeconds(TIMEOUT_DURATION))
+                            .timeout(timeout)
                             .doOnError(e ->
                                     LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
                                             rpcClient, e.getClass(), e.getLocalizedMessage()));
