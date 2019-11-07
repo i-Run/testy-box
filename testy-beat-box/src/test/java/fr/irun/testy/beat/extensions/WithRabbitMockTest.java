@@ -1,37 +1,37 @@
 package fr.irun.testy.beat.extensions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Delivery;
+import fr.irun.testy.beat.messaging.AMQPHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.ReceiverOptions;
-import reactor.rabbitmq.RpcClient;
-import reactor.rabbitmq.Sender;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
-import java.time.Duration;
+import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class WithRabbitListenerMockTest {
+class WithRabbitMockTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WithRabbitListenerMockTest.class);
-    private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
     private static final String RESULT_OK = "Result ok";
     private static final String QUEUE_NAME = "queueName";
     private static final String EXCHANGE_NAME = "exchangeName";
     private static final String MESSAGE_TO_SEND = "sendThisMessage";
+    private static final int QUEUE_CAPACITY = 10;
+    private static final Supplier<String> STRING_SUPPLIER = () -> "ID1" + Math.random();
+
     @RegisterExtension
-    static WithRabbitListenerMock withRabbitListenerMock = WithRabbitListenerMock.builder()
+    static WithRabbitMock withRabbitMock = WithRabbitMock.builder()
             .declareQueueAndExchange(QUEUE_NAME, EXCHANGE_NAME)
             .declareReplyMessage(RESULT_OK)
             .build();
@@ -68,14 +68,14 @@ class WithRabbitListenerMockTest {
     }
 
     @Test
-    void should_inject_list(Queue<Delivery> tested) {
+    void should_inject_queue(Queue<Delivery> tested) {
         assertThat(tested).isInstanceOf(Queue.class);
         assertThat(tested).isNotNull();
     }
 
     @Test
     void should_listen_and_reply(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
-        Delivery replyMessage = emitWithReply(MESSAGE_TO_SEND, senderOptions).block();
+        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME, STRING_SUPPLIER).block();
 
         assert replyMessage != null;
         assertThat(objectMapper.readValue(replyMessage.getBody(), String.class))
@@ -87,40 +87,18 @@ class WithRabbitListenerMockTest {
                 .isEqualTo(MESSAGE_TO_SEND);
     }
 
-    private Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions) {
-        return Mono.using(() -> RabbitFlux.createSender(senderOptions),
-                rabbitSender -> processEmission(rabbitSender, message),
-                Sender::close
-        );
-    }
+    @Test
+    void emitWithReply(Channel channel, SenderOptions sender) throws IOException {
 
-    private Mono<Delivery> processEmission(Sender sender, Object message) {
-        return Mono.just(message)
-                .flatMap(messageToSend -> {
-                    final RpcClient rpcClient = sender.rpcClient(
-                            EXCHANGE_NAME,
-                            "",
-                            () -> "ID" + Math.random()
-                    );
+        Queue<Delivery> messages = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
 
-                    Mono<Delivery> rpcMono = rpcClient.rpc(buildRpcRequest(messageToSend))
-                            .doOnError(e ->
-                                    LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
-                                            rpcClient, e.getClass(), e.getLocalizedMessage()));
-                    rpcClient.close();
-                    return rpcMono;
-                })
-                .timeout(Duration.ofSeconds(1));
-    }
+        AMQPHelper.declareConsumer(channel, messages, QUEUE_NAME, "response");
 
-    private Mono<RpcClient.RpcRequest> buildRpcRequest(Object message) {
-        return Mono.fromCallable(() -> buildRpcRequestFromContent(objectMapper.writeValueAsBytes(message)));
-    }
+        assertThat(Objects.requireNonNull(
+                AMQPHelper.emitWithReply(MESSAGE_TO_SEND, sender, EXCHANGE_NAME, STRING_SUPPLIER)
+                        .flatMap(delivery -> Mono.fromCallable(() -> objectMapper.readValue(delivery.getBody(), String.class)))
+                        .block())).isEqualTo("response");
 
-    private RpcClient.RpcRequest buildRpcRequestFromContent(byte[] content) {
-        final AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder()
-                .replyTo(DEFAULT_RABBIT_REPLY_QUEUE_NAME)
-                .build();
-        return new RpcClient.RpcRequest(properties, content);
+        assertThat(objectMapper.readValue(messages.remove().getBody(), String.class)).isEqualTo(MESSAGE_TO_SEND);
     }
 }
