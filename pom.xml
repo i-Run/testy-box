@@ -4,7 +4,7 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>rocket-parent</artifactId>
-        <version>4</version>
+        <version>5-SNAPSHOT</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
@@ -21,11 +21,13 @@
         <module>testy-mongo-box</module>
         <module>testy-core-box</module>
         <module>testy-jooq-box</module>
+        <module>testy-beat-box</module>
     </modules>
 
     <properties>
         <flapdoodle.version>2.1.1</flapdoodle.version>
         <javax.inject.version>1</javax.inject.version>
+        <rabbitmq-mock.version>1.0.12</rabbitmq-mock.version>
     </properties>
 
     <dependencyManagement>
@@ -46,6 +48,11 @@
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
                 <version>${javax.inject.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.fridujo</groupId>
+                <artifactId>rabbitmq-mock</artifactId>
+                <version>${rabbitmq-mock.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
