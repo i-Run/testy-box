@@ -48,11 +48,11 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
  * <pre style="code">
  *     {@literal @}Test
  *     void test_class_communication(SenderOptions senderOptions) {
- *          Supplier&lt;String&gt; idGenerator = () -> "ID" + Math.random();
+ *          Supplier&lt;String&gt; idGenerator = () -&gt; "ID" + Math.random();
  *          tested.subscribe();
  *
  *          assertThat(AMQPHelper.emitWithReply("message to send to tested", senderOptions, "exchange-queue-name", idGenerator)
- *                 .flatMap(delivery -> Mono.fromCallable(() -> objectMapper.readValue(delivery.getBody(), String.class))).block())
+ *                 .flatMap(delivery -&gt; Mono.fromCallable(() -&gt; objectMapper.readValue(delivery.getBody(), String.class))).block())
  *                 .isEqualTo("message received from tested");
  *      }
  * </pre>
@@ -67,7 +67,8 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
  *         assertThat(objectMapper.readValue(messagesReceived.remove().getBody(), String.class))
  *                 .isEqualTo("message sent by tested");
  *     }
- *     <p>With a custom consumer</p>
+ *
+ *     //With a custom consumer
  *     {@literal @}Test
  *     void test_class_communication(Channel channel) throws IOException {
  *         Queue&lt;Delivery&gt; messagesReceived = new ArrayBlockingQueue&lt;&gt;(QUEUE_CAPACITY);
