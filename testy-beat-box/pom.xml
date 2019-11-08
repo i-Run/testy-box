@@ -8,7 +8,6 @@
     </parent>
 
     <artifactId>testy-beat-box</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
