@@ -1,6 +1,7 @@
 package fr.irun.testy.beat.messaging;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BuiltinExchangeType;
@@ -13,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
-import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.RpcClient;
 import reactor.rabbitmq.Sender;
@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Queue;
 import java.util.function.Supplier;
+
+import static reactor.rabbitmq.RabbitFlux.createSender;
 
 public final class AMQPHelper {
     private static final Logger LOGGER = LoggerFactory.getLogger(AMQPHelper.class);
@@ -119,8 +121,8 @@ public final class AMQPHelper {
      * @return the result of sending ReviewResultMessage
      */
     public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName, Supplier<String> idGenerator) {
-        return Mono.using(() -> RabbitFlux.createSender(senderOptions),
-                sender -> AMQPHelper.processEmission(message, sender, exchangeQueueName, idGenerator, Duration.ofSeconds(TIMEOUT_DURATION)),
+        return Mono.using(() -> createSender(senderOptions),
+                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, idGenerator, Duration.ofSeconds(TIMEOUT_DURATION)),
                 Sender::close
         );
     }
@@ -137,34 +139,38 @@ public final class AMQPHelper {
      */
     public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName,
                                                Supplier<String> idGenerator, Duration timeout) {
-        return Mono.using(() -> RabbitFlux.createSender(senderOptions),
-                sender -> AMQPHelper.processEmission(message, sender, exchangeQueueName, idGenerator, timeout),
+        return Mono.using(() -> createSender(senderOptions),
+                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, idGenerator, timeout),
                 Sender::close
         );
     }
 
-    private static Mono<Delivery> processEmission(Object messageToSend, Sender sender, String exchangeQueueName,
-                                                  Supplier<String> idGenerator, Duration timeout) {
-        return Mono.just(messageToSend)
-                .flatMap(message -> {
-                    final RpcClient rpcClient = sender.rpcClient(
-                            exchangeQueueName,
-                            "",
-                            idGenerator
-                    );
+    private static Mono<Delivery> processEmission(Sender sender, Object messageToSend, String exchangeQueueName,
+                                                 Supplier<String> idGenerator, Duration timeout) {
+        LOGGER.debug("Send message {}. Expect reply", messageToSend);
+        final RpcClient rpcClient = sender.rpcClient(
+                exchangeQueueName,
+                "",
+                idGenerator
+        );
 
-                    Mono<Delivery> rpcMono = rpcClient.rpc(buildRpcRequest(message))
-                            .timeout(timeout)
-                            .doOnError(e ->
-                                    LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
-                                            rpcClient, e.getClass(), e.getLocalizedMessage()));
-                    rpcClient.close();
-                    return rpcMono;
+        Mono<Delivery> rpcMono = rpcClient.rpc(Mono.just(buildRpcRequest(messageToSend)))
+                .timeout(timeout)
+                .onErrorResume(e -> {
+                    LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
+                            rpcClient, e.getClass(), e.getLocalizedMessage());
+                    return Mono.error(new RuntimeException("ProcessEmission failure with RPC Client", e));
                 });
+        rpcClient.close();
+        return rpcMono;
     }
 
-    private static Mono<RpcClient.RpcRequest> buildRpcRequest(Object message) {
-        return Mono.fromCallable(() -> buildRpcRequestFromContent(OBJECT_MAPPER.writeValueAsBytes(message)));
+    private static RpcClient.RpcRequest buildRpcRequest(Object message) {
+        try {
+            return buildRpcRequestFromContent(OBJECT_MAPPER.writeValueAsBytes(message));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Unable to write message to byte array!", e);
+        }
     }
 
     private static RpcClient.RpcRequest buildRpcRequestFromContent(byte[] content) {
