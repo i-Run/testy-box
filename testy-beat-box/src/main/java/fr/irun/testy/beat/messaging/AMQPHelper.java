@@ -1,6 +1,7 @@
 package fr.irun.testy.beat.messaging;
 
 
+import com.fasterxml.jackson.annotation.ObjectIdGenerators.StringIdGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.AMQP;
@@ -22,7 +23,6 @@ import reactor.rabbitmq.SenderOptions;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Queue;
-import java.util.function.Supplier;
 
 import static reactor.rabbitmq.RabbitFlux.createSender;
 
@@ -32,6 +32,7 @@ public final class AMQPHelper {
     private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
     private static final int TIMEOUT_DURATION = 1;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final StringIdGenerator STRING_ID_GENERATOR = new StringIdGenerator();
 
     private AMQPHelper() {
     }
@@ -117,12 +118,11 @@ public final class AMQPHelper {
      * @param message           The rabbit message to send
      * @param senderOptions     The options used to send message
      * @param exchangeQueueName The exchange queue name
-     * @param idGenerator       The Supplier used to generate ids
      * @return the result of sending ReviewResultMessage
      */
-    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName, Supplier<String> idGenerator) {
+    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName) {
         return Mono.using(() -> createSender(senderOptions),
-                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, idGenerator, Duration.ofSeconds(TIMEOUT_DURATION)),
+                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, Duration.ofSeconds(TIMEOUT_DURATION)),
                 Sender::close
         );
     }
@@ -133,34 +133,29 @@ public final class AMQPHelper {
      * @param message           The rabbit message to send
      * @param senderOptions     The options used to send message
      * @param exchangeQueueName The exchange queue name
-     * @param idGenerator       The Supplier used to generate ids
      * @param timeout           The timeout duration before receiving a reply
      * @return the result of sending ReviewResultMessage
      */
-    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName,
-                                               Supplier<String> idGenerator, Duration timeout) {
+    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName, Duration timeout) {
         return Mono.using(() -> createSender(senderOptions),
-                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, idGenerator, timeout),
+                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, timeout),
                 Sender::close
         );
     }
 
-    private static Mono<Delivery> processEmission(Sender sender, Object messageToSend, String exchangeQueueName,
-                                                 Supplier<String> idGenerator, Duration timeout) {
+    private static Mono<Delivery> processEmission(Sender sender, Object messageToSend, String exchangeQueueName, Duration timeout) {
         LOGGER.debug("Send message {}. Expect reply", messageToSend);
+
         final RpcClient rpcClient = sender.rpcClient(
                 exchangeQueueName,
                 "",
-                idGenerator
+                () -> STRING_ID_GENERATOR.generateId(null)
         );
 
         Mono<Delivery> rpcMono = rpcClient.rpc(Mono.just(buildRpcRequest(messageToSend)))
                 .timeout(timeout)
-                .onErrorResume(e -> {
-                    LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
-                            rpcClient, e.getClass(), e.getLocalizedMessage());
-                    return Mono.error(new RuntimeException("ProcessEmission failure with RPC Client", e));
-                });
+                .doOnError(e -> LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
+                        rpcClient, e.getClass(), e.getLocalizedMessage()));
         rpcClient.close();
         return rpcMono;
     }
