@@ -146,18 +146,12 @@ public final class AMQPHelper {
     private static Mono<Delivery> processEmission(Sender sender, Object messageToSend, String exchangeQueueName, Duration timeout) {
         LOGGER.debug("Send message {}. Expect reply", messageToSend);
 
-        final RpcClient rpcClient = sender.rpcClient(
-                exchangeQueueName,
-                "",
-                () -> STRING_ID_GENERATOR.generateId(null)
-        );
-
-        Mono<Delivery> rpcMono = rpcClient.rpc(Mono.just(buildRpcRequest(messageToSend)))
-                .timeout(timeout)
-                .doOnError(e -> LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
-                        rpcClient, e.getClass(), e.getLocalizedMessage()));
-        rpcClient.close();
-        return rpcMono;
+        return Mono.using(() -> sender.rpcClient(exchangeQueueName, "", () -> STRING_ID_GENERATOR.generateId(null)),
+                rpcClient -> rpcClient.rpc(Mono.just(buildRpcRequest(messageToSend)))
+                        .timeout(timeout)
+                        .doOnError(e -> LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
+                                rpcClient, e.getClass(), e.getLocalizedMessage())),
+                RpcClient::close);
     }
 
     private static RpcClient.RpcRequest buildRpcRequest(Object message) {
