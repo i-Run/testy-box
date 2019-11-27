@@ -4,6 +4,7 @@ import com.github.fridujo.rabbitmq.mock.MockConnectionFactory;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Delivery;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
@@ -81,7 +82,7 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
  *     }
  * </pre>
  */
-public final class WithRabbitMock implements BeforeEachCallback, ParameterResolver {
+public final class WithRabbitMock implements BeforeEachCallback, AfterEachCallback, ParameterResolver {
     private static final int QUEUE_CAPACITY = 10;
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
@@ -119,6 +120,16 @@ public final class WithRabbitMock implements BeforeEachCallback, ParameterResolv
         store.put(P_RABBIT_CHANNEL, channel);
         store.put(P_RABBIT_SENDER_OPT, senderOptions);
         store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
+    }
+
+    @Override
+    public void afterEach(ExtensionContext extensionContext) throws Exception {
+        final Channel rabbitChannel = getRabbitChannel(extensionContext);
+
+        rabbitChannel.getConnection().close();
+
+        Store store = getStore(extensionContext);
+        store.put(P_RABBIT_CHANNEL, rabbitChannel);
     }
 
     @Override

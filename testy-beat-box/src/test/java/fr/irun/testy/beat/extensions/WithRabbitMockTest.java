@@ -46,6 +46,12 @@ class WithRabbitMockTest {
     }
 
     @Test
+    void after_each_verification_channel_closed(Channel channel) throws IOException {
+        channel.getConnection().close();
+        assertThat(channel.getConnection().isOpen()).isFalse();
+    }
+
+    @Test
     void should_inject_channel(Channel tested) {
         assertThat(tested).isInstanceOf(Channel.class);
         assertThat(tested).isNotNull();
