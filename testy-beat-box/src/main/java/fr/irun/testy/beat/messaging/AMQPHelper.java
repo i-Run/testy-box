@@ -1,6 +1,8 @@
 package fr.irun.testy.beat.messaging;
 
 
+import com.fasterxml.jackson.annotation.ObjectIdGenerators.StringIdGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BuiltinExchangeType;
@@ -13,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
-import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.RpcClient;
 import reactor.rabbitmq.Sender;
@@ -22,7 +23,8 @@ import reactor.rabbitmq.SenderOptions;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Queue;
-import java.util.function.Supplier;
+
+import static reactor.rabbitmq.RabbitFlux.createSender;
 
 public final class AMQPHelper {
     private static final Logger LOGGER = LoggerFactory.getLogger(AMQPHelper.class);
@@ -30,6 +32,7 @@ public final class AMQPHelper {
     private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
     private static final int TIMEOUT_DURATION = 1;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final StringIdGenerator STRING_ID_GENERATOR = new StringIdGenerator();
 
     private AMQPHelper() {
     }
@@ -115,12 +118,11 @@ public final class AMQPHelper {
      * @param message           The rabbit message to send
      * @param senderOptions     The options used to send message
      * @param exchangeQueueName The exchange queue name
-     * @param idGenerator       The Supplier used to generate ids
      * @return the result of sending ReviewResultMessage
      */
-    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName, Supplier<String> idGenerator) {
-        return Mono.using(() -> RabbitFlux.createSender(senderOptions),
-                sender -> AMQPHelper.processEmission(message, sender, exchangeQueueName, idGenerator, Duration.ofSeconds(TIMEOUT_DURATION)),
+    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName) {
+        return Mono.using(() -> createSender(senderOptions),
+                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, Duration.ofSeconds(TIMEOUT_DURATION)),
                 Sender::close
         );
     }
@@ -131,40 +133,33 @@ public final class AMQPHelper {
      * @param message           The rabbit message to send
      * @param senderOptions     The options used to send message
      * @param exchangeQueueName The exchange queue name
-     * @param idGenerator       The Supplier used to generate ids
      * @param timeout           The timeout duration before receiving a reply
      * @return the result of sending ReviewResultMessage
      */
-    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName,
-                                               Supplier<String> idGenerator, Duration timeout) {
-        return Mono.using(() -> RabbitFlux.createSender(senderOptions),
-                sender -> AMQPHelper.processEmission(message, sender, exchangeQueueName, idGenerator, timeout),
+    public static Mono<Delivery> emitWithReply(Object message, SenderOptions senderOptions, String exchangeQueueName, Duration timeout) {
+        return Mono.using(() -> createSender(senderOptions),
+                sender -> AMQPHelper.processEmission(sender, message, exchangeQueueName, timeout),
                 Sender::close
         );
     }
 
-    private static Mono<Delivery> processEmission(Object messageToSend, Sender sender, String exchangeQueueName,
-                                                  Supplier<String> idGenerator, Duration timeout) {
-        return Mono.just(messageToSend)
-                .flatMap(message -> {
-                    final RpcClient rpcClient = sender.rpcClient(
-                            exchangeQueueName,
-                            "",
-                            idGenerator
-                    );
+    private static Mono<Delivery> processEmission(Sender sender, Object messageToSend, String exchangeQueueName, Duration timeout) {
+        LOGGER.debug("Send message {}. Expect reply", messageToSend);
 
-                    Mono<Delivery> rpcMono = rpcClient.rpc(buildRpcRequest(message))
-                            .timeout(timeout)
-                            .doOnError(e ->
-                                    LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
-                                            rpcClient, e.getClass(), e.getLocalizedMessage()));
-                    rpcClient.close();
-                    return rpcMono;
-                });
+        return Mono.using(() -> sender.rpcClient(exchangeQueueName, "", () -> STRING_ID_GENERATOR.generateId(null)),
+                rpcClient -> rpcClient.rpc(Mono.just(buildRpcRequest(messageToSend)))
+                        .timeout(timeout)
+                        .doOnError(e -> LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
+                                rpcClient, e.getClass(), e.getLocalizedMessage())),
+                RpcClient::close);
     }
 
-    private static Mono<RpcClient.RpcRequest> buildRpcRequest(Object message) {
-        return Mono.fromCallable(() -> buildRpcRequestFromContent(OBJECT_MAPPER.writeValueAsBytes(message)));
+    private static RpcClient.RpcRequest buildRpcRequest(Object message) {
+        try {
+            return buildRpcRequestFromContent(OBJECT_MAPPER.writeValueAsBytes(message));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Unable to write message to byte array!", e);
+        }
     }
 
     private static RpcClient.RpcRequest buildRpcRequestFromContent(byte[] content) {

@@ -12,7 +12,6 @@ import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
 import java.util.Queue;
-import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,7 +20,6 @@ class WithRabbitMockReplyNullTest {
     private static final String QUEUE_NAME = "queueName";
     private static final String EXCHANGE_NAME = "exchangeName";
     private static final String MESSAGE_TO_SEND = "sendThisMessage";
-    private static final Supplier<String> STRING_SUPPLIER = () -> "ID1" + Math.random();
 
     @RegisterExtension
     static WithRabbitMock withRabbitMock = WithRabbitMock.builder()
@@ -67,7 +65,7 @@ class WithRabbitMockReplyNullTest {
 
     @Test
     void should_listen_and_reply_null(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
-        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME, STRING_SUPPLIER).block();
+        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
 
         assert replyMessage != null;
         assertThat(objectMapper.readValue(replyMessage.getBody(), String.class))

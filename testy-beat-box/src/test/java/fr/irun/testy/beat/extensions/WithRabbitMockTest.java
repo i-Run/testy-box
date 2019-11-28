@@ -7,8 +7,6 @@ import fr.irun.testy.beat.messaging.AMQPHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
@@ -17,7 +15,6 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,7 +25,6 @@ class WithRabbitMockTest {
     private static final String EXCHANGE_NAME = "exchangeName";
     private static final String MESSAGE_TO_SEND = "sendThisMessage";
     private static final int QUEUE_CAPACITY = 10;
-    private static final Supplier<String> STRING_SUPPLIER = () -> "ID1" + Math.random();
 
     @RegisterExtension
     static WithRabbitMock withRabbitMock = WithRabbitMock.builder()
@@ -47,6 +43,12 @@ class WithRabbitMockTest {
         assertThat(sender).isNotNull();
         assertThat(receiver).isNotNull();
         assertThat(messages).isNotNull();
+    }
+
+    @Test
+    void after_each_verification_channel_closed(Channel channel) throws IOException {
+        channel.getConnection().close();
+        assertThat(channel.getConnection().isOpen()).isFalse();
     }
 
     @Test
@@ -75,7 +77,7 @@ class WithRabbitMockTest {
 
     @Test
     void should_listen_and_reply(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
-        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME, STRING_SUPPLIER).block();
+        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
 
         assert replyMessage != null;
         assertThat(objectMapper.readValue(replyMessage.getBody(), String.class))
@@ -95,7 +97,7 @@ class WithRabbitMockTest {
         AMQPHelper.declareConsumer(channel, messages, QUEUE_NAME, "response");
 
         assertThat(Objects.requireNonNull(
-                AMQPHelper.emitWithReply(MESSAGE_TO_SEND, sender, EXCHANGE_NAME, STRING_SUPPLIER)
+                AMQPHelper.emitWithReply(MESSAGE_TO_SEND, sender, EXCHANGE_NAME)
                         .flatMap(delivery -> Mono.fromCallable(() -> objectMapper.readValue(delivery.getBody(), String.class)))
                         .block())).isEqualTo("response");
 
