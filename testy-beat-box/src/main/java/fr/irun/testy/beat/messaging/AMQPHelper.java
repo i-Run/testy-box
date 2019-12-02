@@ -1,7 +1,6 @@
 package fr.irun.testy.beat.messaging;
 
 
-import com.fasterxml.jackson.annotation.ObjectIdGenerators.StringIdGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.AMQP;
@@ -23,6 +22,7 @@ import reactor.rabbitmq.SenderOptions;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Queue;
+import java.util.UUID;
 
 import static reactor.rabbitmq.RabbitFlux.createSender;
 
@@ -32,7 +32,6 @@ public final class AMQPHelper {
     private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
     private static final int TIMEOUT_DURATION = 1;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final StringIdGenerator STRING_ID_GENERATOR = new StringIdGenerator();
 
     private AMQPHelper() {
     }
@@ -146,7 +145,7 @@ public final class AMQPHelper {
     private static Mono<Delivery> processEmission(Sender sender, Object messageToSend, String exchangeQueueName, Duration timeout) {
         LOGGER.debug("Send message {}. Expect reply", messageToSend);
 
-        return Mono.using(() -> sender.rpcClient(exchangeQueueName, "", () -> STRING_ID_GENERATOR.generateId(null)),
+        return Mono.using(() -> sender.rpcClient(exchangeQueueName, "", () -> UUID.randomUUID().toString()),
                 rpcClient -> rpcClient.rpc(Mono.just(buildRpcRequest(messageToSend)))
                         .timeout(timeout)
                         .doOnError(e -> LOGGER.error("ProcessEmission failure with RPC Client '{}'. {}: {}",
