@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.lang.reflect.Parameter;
 import java.net.InetAddress;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Allow to launch en Embedded Mongo DB
@@ -48,6 +49,7 @@ import java.util.UUID;
 public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, ParameterResolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(WithEmbeddedMongo.class);
 
+    private static final Namespace NAMESPACE = Namespace.create(WithEmbeddedMongo.class);
 
     private static final String P_MONGOD = "mongod";
     private static final String P_MONGO_EXE = "mongoExe";
@@ -56,13 +58,29 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
     private static final String P_MONGO_DB_NAME = "mongoDbName";
 
     private final String databaseName;
+    private final AtomicReference<ReactiveMongoDatabaseFactory> mongoFactory;
 
     public WithEmbeddedMongo() {
-        this.databaseName = UUID.randomUUID().toString();
+        this(UUID.randomUUID().toString());
     }
 
     private WithEmbeddedMongo(String databaseName) {
         this.databaseName = databaseName;
+        this.mongoFactory = new AtomicReference<>();
+    }
+
+    /**
+     * Retrieve the latest initialized Factory. Avoid to require {@link ExtensionContext} and allow SpringBoot mock.
+     * <p>
+     * If possible, prefer inject {@link ReactiveMongoDatabaseFactory} in test method instead.
+     *
+     * @return the {@link ReactiveMongoDatabaseFactory} created in the beforeAll.
+     */
+    public ReactiveMongoDatabaseFactory getMongoFactory() {
+        return mongoFactory.updateAndGet(old -> {
+            assert old != null : "No Mongo factory initialized !";
+            return old;
+        });
     }
 
     public ReactiveMongoDatabaseFactory getMongoFactory(ExtensionContext context) {
@@ -88,7 +106,6 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
         MongodStarter runtime = MongodStarter.getInstance(runtimeConfig);
 
         MongodExecutable mongodExe = runtime.prepare(mongoConfig);
-        MongodProcess mongod = mongodExe.start();
 
         MongoClient mongo = MongoClients.create(String.format("mongodb://%s:%d/%s",
                 mongoConfig.net().getServerAddress().getHostAddress(),
@@ -96,6 +113,11 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
                 databaseName));
 
         ReactiveMongoDatabaseFactory mongoFactory = new SimpleReactiveMongoDatabaseFactory(mongo, databaseName);
+        if (!this.mongoFactory.compareAndSet(null, mongoFactory)) {
+            throw new IllegalStateException("Mongo factory already initialized ! Multiple Mongo factory not supported !");
+        }
+
+        MongodProcess mongod = mongodExe.start();
 
         Store store = getStore(context);
         store.put(P_MONGO_DB_NAME, databaseName);
@@ -148,7 +170,7 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
     }
 
     private Store getStore(ExtensionContext context) {
-        return context.getStore(Namespace.create(getClass()));
+        return context.getStore(NAMESPACE);
     }
 
     public static WithEmbeddedMongoBuilder builder() {
