@@ -54,7 +54,7 @@ class WithMongoDataTest {
             COLLECTION_1,
     })
     void should_have_inserted_data(String collectionName) throws InterruptedException {
-        final TestSubscriber subscriber = new TestSubscriber(1);
+        final TestSubscriber subscriber = new TestSubscriber();
 
         mongoDatabase.getCollection(collectionName).find()
                 .subscribe(subscriber);
@@ -68,8 +68,8 @@ class WithMongoDataTest {
         private final CountDownLatch countDown;
         private final ImmutableList.Builder<Document> content = ImmutableList.builder();
 
-        private TestSubscriber(int count) {
-            this.countDown = new CountDownLatch(count);
+        private TestSubscriber() {
+            this.countDown = new CountDownLatch(1);
         }
 
         @Override
