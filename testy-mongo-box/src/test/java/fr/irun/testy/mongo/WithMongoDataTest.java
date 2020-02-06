@@ -28,7 +28,8 @@ class WithMongoDataTest {
             .build();
     private static final WithObjectMapper WITH_OBJECT_MAPPER = WithObjectMapper.builder()
             .build();
-    private static final WithMongoData WITH_MONGO_DATA = WithMongoData.builder(WITH_EMBEDDED_MONGO, WITH_OBJECT_MAPPER)
+    private static final WithMongoData WITH_MONGO_DATA = WithMongoData.builder(WITH_EMBEDDED_MONGO)
+            .withObjectMapper(WITH_OBJECT_MAPPER)
             .addDataset(COLLECTION_0, new DocumentDataSet())
             .addDataset(COLLECTION_1, new DocumentDataSet())
             .build();
