@@ -23,6 +23,66 @@ import java.util.stream.Collectors;
 
 /**
  * Extension allowing to initialize a mongo database with data.
+ * <p>
+ * Example of use with model:
+ * <pre>
+ *
+ * &#64;Builder
+ * &#64;Value
+ * public class User {
+ *
+ *     private final String id;
+ *     private final String login;
+ *     private final String firstName;
+ *     private final String lastName;
+ *     private final String password;
+ *
+ * }
+ * </pre>
+ * <p>
+ * Implementation of the data set:
+ * <pre>
+ *
+ * public class UserDataSet implements MongoDataSet&lt;User&gt; {
+ *     &#64;Override
+ *     public List&lt;User&gt; documents() {
+ *         final User user = User.builder()
+ *                 .id("generated-id")
+ *                 .firstName("Obiwan")
+ *                 .lastName("Kenobi")
+ *                 .login("okenobi")
+ *                 .password("110812f67fa1e1f0117f6f3d70241c1a42a7b07711a93c2477cc516d9042f9db")
+ *                 .build();
+ *         return ImmutableList.of(user);
+ *     }
+ * }
+ * </pre>
+ * <p>
+ * Use of the extension. Before each test, the mongo test database will contain the documents of the data set:
+ * <pre>
+ * public class UserMongoRepositoryTest {
+ *
+ *     private static final String USER_COLLECTION = "user";
+ *
+ *     private static final WithEmbeddedMongo WITH_EMBEDDED_MONGO = WithEmbeddedMongo.builder()
+ *             .build();
+ *     private static final WithObjectMapper WITH_OBJECT_MAPPER = WithObjectMapper.builder()
+ *             .addMixin(User.class, UserMongoMixin.class)
+ *             .build();
+ *     private static final WithMongoData WITH_MONGO_DATA = WithMongoData.builder(WITH_EMBEDDED_MONGO)
+ *             .withObjectMapper(WITH_OBJECT_MAPPER)
+ *             .addDataset(USER_COLLECTION, new UserDataSet())
+ *             .build();
+ *
+ *     &#64;RegisterExtension
+ *     static final ChainedExtension CHAIN = ChainedExtension.outer(WITH_EMBEDDED_MONGO)
+ *             .append(WITH_OBJECT_MAPPER)
+ *             .append(WITH_MONGO_DATA)
+ *             .register();
+ *
+ *     // (...)
+ * }
+ * </pre>
  */
 public final class WithMongoData implements BeforeEachCallback {
 
