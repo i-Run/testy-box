@@ -11,16 +11,14 @@ import org.bson.Document;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
+import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 /**
@@ -65,10 +63,7 @@ public final class WithMongoData implements BeforeEachCallback {
 
     private void cleanCollection(MongoDatabase mongoDb, String collectionName) {
         final Publisher<DeleteResult> publisher = mongoDb.getCollection(collectionName).deleteMany(new BasicDBObject());
-        final BlockingSubscriber subscriber = new BlockingSubscriber();
-
-        publisher.subscribe(subscriber);
-        subscriber.await();
+        Mono.from(publisher).block();
     }
 
     private void fillCollection(MongoDatabase mongoDb, ObjectMapper objectMapper, String collectionName, MongoDataSet<?> dataSet) {
@@ -77,10 +72,7 @@ public final class WithMongoData implements BeforeEachCallback {
                 .collect(Collectors.toList());
 
         final Publisher<Success> publisher = mongoDb.getCollection(collectionName).insertMany(toInsert);
-        final BlockingSubscriber subscriber = new BlockingSubscriber();
-
-        publisher.subscribe(subscriber);
-        subscriber.await();
+        Mono.from(publisher).block();
     }
 
     /**
@@ -139,46 +131,6 @@ public final class WithMongoData implements BeforeEachCallback {
             return Optional.ofNullable(wObjectMapper)
                     .map(wom -> new WithMongoData(wEmbeddedMongo, wom, dataSetsBuilder.build()))
                     .orElseGet(() -> new WithMongoData(wEmbeddedMongo, dataSetsBuilder.build()));
-        }
-    }
-
-    /**
-     * Blocking subscriber for mongo publishers.
-     */
-    private static final class BlockingSubscriber implements Subscriber<Object> {
-
-        private final CountDownLatch countDownLatch;
-
-        BlockingSubscriber() {
-            this.countDownLatch = new CountDownLatch(1);
-        }
-
-        @Override
-        public void onSubscribe(Subscription subscription) {
-            subscription.request(Long.MAX_VALUE);
-        }
-
-        @Override
-        public void onNext(Object t) {
-            // No action
-        }
-
-        @Override
-        public void onError(Throwable throwable) {
-            throw new IllegalStateException(throwable);
-        }
-
-        @Override
-        public void onComplete() {
-            this.countDownLatch.countDown();
-        }
-
-        void await() {
-            try {
-                this.countDownLatch.await();
-            } catch (InterruptedException e) {
-                throw new IllegalStateException("Mongo subscriber interrupted", e);
-            }
         }
     }
 }

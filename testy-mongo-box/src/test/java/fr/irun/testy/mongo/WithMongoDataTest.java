@@ -1,7 +1,6 @@
 package fr.irun.testy.mongo;
 
 
-import com.google.common.collect.ImmutableList;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import fr.irun.testy.core.extensions.ChainedExtension;
 import fr.irun.testy.core.extensions.WithObjectMapper;
@@ -11,11 +10,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
+import reactor.core.publisher.Flux;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,42 +52,11 @@ class WithMongoDataTest {
             COLLECTION_1,
     })
     void should_have_inserted_data(String collectionName) throws InterruptedException {
-        final TestSubscriber subscriber = new TestSubscriber();
+        final List<Document> actual = Flux.from(mongoDatabase.getCollection(collectionName).find())
+                .collectList()
+                .block();
 
-        mongoDatabase.getCollection(collectionName).find()
-                .subscribe(subscriber);
-        subscriber.countDown.await();
-
-        assertThat(subscriber.content.build()).containsExactly(DocumentDataSet.DOCUMENT_0, DocumentDataSet.DOCUMENT_1);
+        assertThat(actual).containsExactly(DocumentDataSet.DOCUMENT_0, DocumentDataSet.DOCUMENT_1);
     }
 
-    private static final class TestSubscriber implements Subscriber<Document> {
-
-        private final CountDownLatch countDown;
-        private final ImmutableList.Builder<Document> content = ImmutableList.builder();
-
-        private TestSubscriber() {
-            this.countDown = new CountDownLatch(1);
-        }
-
-        @Override
-        public void onSubscribe(Subscription subscription) {
-            subscription.request(Long.MAX_VALUE);
-        }
-
-        @Override
-        public void onNext(Document o) {
-            content.add(o);
-        }
-
-        @Override
-        public void onError(Throwable throwable) {
-            throw new IllegalStateException(throwable);
-        }
-
-        @Override
-        public void onComplete() {
-            countDown.countDown();
-        }
-    }
 }
