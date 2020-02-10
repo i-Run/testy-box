@@ -51,7 +51,7 @@ class WithMongoDataTest {
             COLLECTION_0,
             COLLECTION_1,
     })
-    void should_have_inserted_data(String collectionName) throws InterruptedException {
+    void should_have_inserted_data(String collectionName) {
         final List<Document> actual = Flux.from(mongoDatabase.getCollection(collectionName).find())
                 .collectList()
                 .block();
