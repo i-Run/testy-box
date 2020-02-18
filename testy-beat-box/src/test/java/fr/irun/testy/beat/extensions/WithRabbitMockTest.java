@@ -1,40 +1,52 @@
 package fr.irun.testy.beat.extensions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Delivery;
-import fr.irun.testy.beat.messaging.AMQPHelper;
+import fr.irun.testy.beat.mappers.SingleValueDeliveryMapper;
+import fr.irun.testy.core.extensions.ChainedExtension;
+import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import reactor.core.publisher.Mono;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Test verifying if the expected objects are injected by {@link WithRabbitMock} extension.
+ */
 class WithRabbitMockTest {
 
     private static final String RESULT_OK = "Result ok";
     private static final String QUEUE_NAME = "queueName";
     private static final String EXCHANGE_NAME = "exchangeName";
-    private static final String MESSAGE_TO_SEND = "sendThisMessage";
-    private static final int QUEUE_CAPACITY = 10;
+
+    private static final SingleValueDeliveryMapper<String> RESPONSE_MAPPER = new SingleValueDeliveryMapper<>(RESULT_OK);
+
+    private static final WithObjectMapper WITH_OBJECT_MAPPER = WithObjectMapper.builder()
+            .build();
+    private static final WithRabbitMock WITH_RABBIT_MOCK = WithRabbitMock.builder()
+            .withObjectMapper(WITH_OBJECT_MAPPER)
+            .declareQueueAndExchange(QUEUE_NAME, EXCHANGE_NAME)
+            .declareResponseMapper(RESPONSE_MAPPER)
+            .build();
 
     @RegisterExtension
-    static WithRabbitMock withRabbitMock = WithRabbitMock.builder()
-            .declareQueueAndExchange(QUEUE_NAME, EXCHANGE_NAME)
-            .declareReplyMessage(RESULT_OK)
-            .build();
-    private static ObjectMapper objectMapper = new ObjectMapper();
+    @SuppressWarnings("unused")
+    static final ChainedExtension CHAIN = ChainedExtension.outer(WITH_OBJECT_MAPPER)
+            .append(WITH_RABBIT_MOCK)
+            .register();
 
     @BeforeEach
-    void setUp(Channel channel, SenderOptions sender, ReceiverOptions receiver, Queue<String> messages) {
+    void setUp(Channel channel,
+               SenderOptions sender,
+               ReceiverOptions receiver,
+               Queue<String> messages) {
         assertThat(channel).isInstanceOf(Channel.class);
         assertThat(sender).isInstanceOf(SenderOptions.class);
         assertThat(receiver).isInstanceOf(ReceiverOptions.class);
@@ -52,19 +64,25 @@ class WithRabbitMockTest {
     }
 
     @Test
+    void should_inject_connection(Connection tested) {
+        assertThat(tested).isNotNull();
+        assertThat(tested.isOpen()).isTrue();
+    }
+
+    @Test
     void should_inject_channel(Channel tested) {
         assertThat(tested).isInstanceOf(Channel.class);
         assertThat(tested).isNotNull();
     }
 
     @Test
-    void should_inject_sender(SenderOptions tested) {
+    void should_inject_sender_options(SenderOptions tested) {
         assertThat(tested).isInstanceOf(SenderOptions.class);
         assertThat(tested).isNotNull();
     }
 
     @Test
-    void should_inject_receiver(ReceiverOptions tested) {
+    void should_inject_receiver_options(ReceiverOptions tested) {
         assertThat(tested).isInstanceOf(ReceiverOptions.class);
         assertThat(tested).isNotNull();
     }
@@ -73,34 +91,5 @@ class WithRabbitMockTest {
     void should_inject_queue(Queue<Delivery> tested) {
         assertThat(tested).isInstanceOf(Queue.class);
         assertThat(tested).isNotNull();
-    }
-
-    @Test
-    void should_listen_and_reply(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
-        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
-
-        assert replyMessage != null;
-        assertThat(objectMapper.readValue(replyMessage.getBody(), String.class))
-                .isEqualTo(RESULT_OK);
-
-        assert messages != null;
-        assertThat(messages.isEmpty()).isFalse();
-        assertThat(objectMapper.readValue(messages.remove().getBody(), String.class))
-                .isEqualTo(MESSAGE_TO_SEND);
-    }
-
-    @Test
-    void emitWithReply(Channel channel, SenderOptions sender) throws IOException {
-
-        Queue<Delivery> messages = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
-
-        AMQPHelper.declareConsumer(channel, messages, QUEUE_NAME, "response");
-
-        assertThat(Objects.requireNonNull(
-                AMQPHelper.emitWithReply(MESSAGE_TO_SEND, sender, EXCHANGE_NAME)
-                        .flatMap(delivery -> Mono.fromCallable(() -> objectMapper.readValue(delivery.getBody(), String.class)))
-                        .block())).isEqualTo("response");
-
-        assertThat(objectMapper.readValue(messages.remove().getBody(), String.class)).isEqualTo(MESSAGE_TO_SEND);
     }
 }

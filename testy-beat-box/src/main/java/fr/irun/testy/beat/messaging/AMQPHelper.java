@@ -10,6 +10,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Delivery;
 import com.rabbitmq.client.Envelope;
+import fr.irun.testy.beat.mappers.DeliveryMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -27,6 +28,7 @@ import java.util.UUID;
 import static reactor.rabbitmq.RabbitFlux.createSender;
 
 public final class AMQPHelper {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(AMQPHelper.class);
 
     private static final String DEFAULT_RABBIT_REPLY_QUEUE_NAME = "amq.rabbitmq.reply-to";
@@ -49,6 +51,16 @@ public final class AMQPHelper {
         channel.exchangeDeclare(exchangeQueueName, BuiltinExchangeType.DIRECT, false, true, null);
         channel.queueBind(queueName, exchangeQueueName, "");
 
+        channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, true, null);
+    }
+
+    /**
+     * Declare the reply queue.
+     *
+     * @param channel The channel object used for communication.
+     * @throws IOException if an error occurred during queue declaration.
+     */
+    public static void declareReplyQueue(Channel channel) throws IOException {
         channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, true, null);
     }
 
@@ -112,6 +124,43 @@ public final class AMQPHelper {
     }
 
     /**
+     * Declare a consumer on the given queue.
+     *
+     * @param channel        Channel of the AMQP broker.
+     * @param objectMapper   Jackson mapper to convert deliveries to object.
+     * @param messages       Queue where the messages are put.
+     * @param queueName      Name of the consumed queue.
+     * @param responseMapper Mapper used to convert the request delivery to response object.
+     */
+    public static void declareConsumer(Channel channel,
+                                       ObjectMapper objectMapper,
+                                       Queue<Delivery> messages,
+                                       String queueName,
+                                       DeliveryMapper<?> responseMapper) {
+        try {
+            channel.basicConsume(queueName, true,
+                    new DefaultConsumer(channel) {
+                        @Override
+                        public void handleDelivery(String consumerTag,
+                                                   Envelope envelope,
+                                                   AMQP.BasicProperties properties,
+                                                   byte[] body) throws IOException {
+                            final Delivery delivery = new Delivery(envelope, properties, body);
+                            messages.offer(delivery);
+                            channel.basicPublish(
+                                    "",
+                                    properties.getReplyTo(),
+                                    new AMQP.BasicProperties.Builder().correlationId(properties.getCorrelationId()).build(),
+                                    objectMapper.writeValueAsBytes(responseMapper.map(delivery))
+                            );
+                        }
+                    });
+        } catch (IOException e) {
+            LOGGER.error("Failure during message reception", e);
+        }
+    }
+
+    /**
      * Declare a message to send into rabbit communication and send it
      *
      * @param message           The rabbit message to send
@@ -157,7 +206,7 @@ public final class AMQPHelper {
         try {
             return buildRpcRequestFromContent(OBJECT_MAPPER.writeValueAsBytes(message));
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Unable to write message to byte array!", e);
+            throw new IllegalStateException("Unable to write message to byte array!", e);
         }
     }
 

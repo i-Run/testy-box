@@ -1,0 +1,44 @@
+{
+  "name": "Embedded Broker",
+  "modelVersion": "7.0",
+  "authenticationproviders": [
+    {
+      "name": "hardcoded",
+      "type": "Plain",
+      "secureOnlyMechanisms": [],
+      "users": [
+        {
+          "name": "obiwan",
+          "password": "kenobi",
+          "type": "managed"
+        }
+      ]
+    }
+  ],
+  "ports": [
+    {
+      "name": "AMQP",
+      "port": "9595",
+      "protocols": [
+        "AMQP_0_9",
+        "AMQP_0_9_1",
+        "AMQP_1_0"
+      ],
+      "authenticationProvider": "hardcoded",
+      "virtualhostaliases": [
+        {
+          "name": "defaultAlias",
+          "type": "defaultAlias"
+        }
+      ]
+    }
+  ],
+  "virtualhostnodes": [
+    {
+      "name": "default",
+      "type": "Memory",
+      "defaultVirtualHostNode": "true",
+      "virtualHostInitialConfiguration": "{\"type\": \"Memory\"}"
+    }
+  ]
+}

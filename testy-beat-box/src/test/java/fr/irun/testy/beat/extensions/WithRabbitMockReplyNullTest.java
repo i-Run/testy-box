@@ -1,13 +1,10 @@
 package fr.irun.testy.beat.extensions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.messaging.AMQPHelper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
@@ -22,49 +19,15 @@ class WithRabbitMockReplyNullTest {
     private static final String MESSAGE_TO_SEND = "sendThisMessage";
 
     @RegisterExtension
-    static WithRabbitMock withRabbitMock = WithRabbitMock.builder()
+    @SuppressWarnings("unused")
+    static final WithRabbitMock WITH_RABBIT_MOCK = WithRabbitMock.builder()
             .declareQueueAndExchange(QUEUE_NAME, EXCHANGE_NAME)
             .build();
+
     private static ObjectMapper objectMapper = new ObjectMapper();
 
-    @BeforeEach
-    void setUp(Channel channel, SenderOptions sender, ReceiverOptions receiver, Queue<String> messages) {
-        assertThat(channel).isInstanceOf(Channel.class);
-        assertThat(sender).isInstanceOf(SenderOptions.class);
-        assertThat(receiver).isInstanceOf(ReceiverOptions.class);
-        assertThat(messages).isInstanceOf(Queue.class);
-        assertThat(channel).isNotNull();
-        assertThat(sender).isNotNull();
-        assertThat(receiver).isNotNull();
-        assertThat(messages).isNotNull();
-    }
-
     @Test
-    void should_inject_channel(Channel tested) {
-        assertThat(tested).isInstanceOf(Channel.class);
-        assertThat(tested).isNotNull();
-    }
-
-    @Test
-    void should_inject_sender(SenderOptions tested) {
-        assertThat(tested).isInstanceOf(SenderOptions.class);
-        assertThat(tested).isNotNull();
-    }
-
-    @Test
-    void should_inject_receiver(ReceiverOptions tested) {
-        assertThat(tested).isInstanceOf(ReceiverOptions.class);
-        assertThat(tested).isNotNull();
-    }
-
-    @Test
-    void should_inject_queue(Queue<Delivery> tested) {
-        assertThat(tested).isInstanceOf(Queue.class);
-        assertThat(tested).isNotNull();
-    }
-
-    @Test
-    void should_listen_and_reply_null(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
+    void should_emit_and_reply_null(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
         Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
 
         assert replyMessage != null;
