@@ -258,7 +258,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
         private String queueName;
         private String exchangeQueueName;
-        private DeliveryMapper<?> responseMapper = DEFAULT_DELIVERY_MAPPER;
+        private DeliveryMapper<?> requestDeliveryMapper = DEFAULT_DELIVERY_MAPPER;
         @Nullable
         private WithObjectMapper withObjectMapper;
 
@@ -280,20 +280,23 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
          *
          * @param replyMessage The message used for reply
          * @return the builder
+         * @deprecated Use {@link #declareRequestDeliveryMapper(DeliveryMapper)} instead. Removed in version 1.3.0.
          */
+        @Deprecated
         public WithRabbitMockBuilder declareReplyMessage(Object replyMessage) {
-            this.responseMapper = (x -> replyMessage);
+            this.requestDeliveryMapper = (x -> replyMessage);
             return this;
         }
 
         /**
-         * Declare a mapper for the repsonse.
+         * Declare a mapper for the request delivery.
+         * This mapper is only used when a queue consumer is mocked, to indicate the object to return.
          *
-         * @param responseMapper Mapper used to convert the request delivery to response object
+         * @param requestDeliveryMapper Mapper used to convert the request delivery to response object
          * @return Builder instance.
          */
-        public WithRabbitMockBuilder declareResponseMapper(DeliveryMapper<?> responseMapper) {
-            this.responseMapper = responseMapper;
+        public WithRabbitMockBuilder declareRequestDeliveryMapper(DeliveryMapper<?> requestDeliveryMapper) {
+            this.requestDeliveryMapper = requestDeliveryMapper;
             return this;
         }
 
@@ -314,7 +317,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
          * @return The extension
          */
         public WithRabbitMock build() {
-            return new WithRabbitMock(queueName, exchangeQueueName, responseMapper, withObjectMapper);
+            return new WithRabbitMock(queueName, exchangeQueueName, requestDeliveryMapper, withObjectMapper);
         }
     }
 }

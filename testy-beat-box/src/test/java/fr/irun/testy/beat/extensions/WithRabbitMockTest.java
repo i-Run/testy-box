@@ -32,7 +32,7 @@ class WithRabbitMockTest {
     private static final WithRabbitMock WITH_RABBIT_MOCK = WithRabbitMock.builder()
             .withObjectMapper(WITH_OBJECT_MAPPER)
             .declareQueueAndExchange(QUEUE_NAME, EXCHANGE_NAME)
-            .declareResponseMapper(RESPONSE_MAPPER)
+            .declareRequestDeliveryMapper(RESPONSE_MAPPER)
             .build();
 
     @RegisterExtension
