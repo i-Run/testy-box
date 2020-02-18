@@ -81,8 +81,8 @@ class WithRabbitMockTest {
     }
 
     @Test
-    void should_inject_queue(Queue<Delivery> tested) {
-        assertThat(tested).isInstanceOf(Queue.class);
-        assertThat(tested).isNotNull();
+    void should_inject_received_messages(Queue<Delivery> receivedMessages) {
+        assertThat(receivedMessages).isInstanceOf(Queue.class);
+        assertThat(receivedMessages).isNotNull();
     }
 }

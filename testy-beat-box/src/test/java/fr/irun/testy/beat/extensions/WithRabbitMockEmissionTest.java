@@ -1,6 +1,7 @@
 package fr.irun.testy.beat.extensions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.mappers.DeliveryMapper;
 import fr.irun.testy.beat.mappers.JacksonDeliveryMapperFactory;
 import fr.irun.testy.beat.messaging.AMQPHelper;
@@ -9,6 +10,9 @@ import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.rabbitmq.SenderOptions;
+
+import java.util.Optional;
+import java.util.Queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,7 +31,7 @@ public class WithRabbitMockEmissionTest {
     private static final WithRabbitMock WITH_RABBIT_MOCK = WithRabbitMock.builder()
             .withObjectMapper(WITH_OBJECT_MAPPER)
             .declareQueueAndExchange(QUEUE_NAME, EXCHANGE_NAME)
-            .declareReplyMessage(RESULT_OK)
+            .declareRequestDeliveryMapper(d -> RESULT_OK)
             .build();
 
     @RegisterExtension
@@ -37,13 +41,19 @@ public class WithRabbitMockEmissionTest {
             .register();
 
     @Test
-    void should_emit_with_reply(SenderOptions sender, ObjectMapper objectMapper) {
+    void should_emit_with_reply(SenderOptions sender, ObjectMapper objectMapper, Queue<Delivery> receivedMessages) {
         final DeliveryMapper<String> responseMapper = JacksonDeliveryMapperFactory.forClass(objectMapper, String.class);
 
-        final String actual = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, sender, EXCHANGE_NAME)
+        final String actualResponse = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, sender, EXCHANGE_NAME)
                 .map(responseMapper::map)
                 .block();
-        assertThat(actual).isEqualTo(RESULT_OK);
+        assertThat(actualResponse).isEqualTo(RESULT_OK);
+
+        final String actualReceivedMessage = Optional.ofNullable(receivedMessages.poll())
+                .map(responseMapper::map)
+                .orElse(null);
+        assertThat(actualReceivedMessage).isNotNull();
+        assertThat(actualReceivedMessage).isEqualTo(MESSAGE_TO_SEND);
     }
 
 }

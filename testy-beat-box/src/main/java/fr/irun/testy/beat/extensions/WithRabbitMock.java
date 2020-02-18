@@ -96,7 +96,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
     private static final String P_RABBIT_RECEIVER_OPT = "rabbit-receiver-opt";
-    private static final String P_RABBIT_CONSUMED_QUEUE = "rabbit-consumed-queue";
+    private static final String P_RABBIT_RECEIVED_MESSAGES = "rabbit-received-messages";
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
 
@@ -143,14 +143,14 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         Connection conn = getRabbitConnection(context);
         Channel channel = conn.createChannel();
 
-        Queue<Delivery> messages = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
+        Queue<Delivery> receivedMessages = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
         if (queueName != null && exchangeQueueName != null) {
             final ObjectMapper objectMapper = Optional.ofNullable(withObjectMapper)
                     .map(wom -> wom.getObjectMapper(context))
                     .orElseGet(ObjectMapper::new);
 
             declareAndBindQueues(channel, queueName, exchangeQueueName);
-            declareConsumer(channel, objectMapper, messages, queueName, responseMapper);
+            declareConsumer(channel, objectMapper, receivedMessages, queueName, responseMapper);
         }
         declareReplyQueue(channel);
 
@@ -160,7 +160,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         store.put(P_RABBIT_CHANNEL, channel);
         store.put(P_RABBIT_SENDER_OPT, senderOptions);
         store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
-        store.put(P_RABBIT_CONSUMED_QUEUE, messages);
+        store.put(P_RABBIT_RECEIVED_MESSAGES, receivedMessages);
     }
 
     @Override
@@ -201,7 +201,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
             return getReceiverOptions(extensionContext);
         }
         if (Queue.class.equals(aClass)) {
-            return getStore(extensionContext).get(P_RABBIT_CONSUMED_QUEUE, Queue.class);
+            return getStore(extensionContext).get(P_RABBIT_RECEIVED_MESSAGES, Queue.class);
         }
         throw new ParameterResolutionException("Unable to resolve parameter for Rabbit Channel !");
     }

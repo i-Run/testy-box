@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.stream.Stream;
@@ -31,8 +32,10 @@ public class WithRabbitMockConsumptionTest {
 
     private static final String REQUEST_1 = "Request obiwan";
     private static final String RESPONSE_1 = "Response kenobi";
+
     private static final String REQUEST_2 = "Request Anakin";
     private static final String RESPONSE_2 = "Response Skywalker";
+
     private static final String REQUEST_3 = "An idiot question?";
     private static final String RESPONSE_3 = "A more idiot answer.";
 
@@ -72,30 +75,18 @@ public class WithRabbitMockConsumptionTest {
                 .block();
         assertThat(actual).isNotNull();
         assertThat(actual).isEqualTo(expectedResponse);
+
+        final String actualReceivedMessage = Optional.ofNullable(consumer.receivedMessages.poll())
+                .map(mapper::map)
+                .orElse(null);
+        assertThat(actualReceivedMessage).isNotNull();
+        assertThat(actualReceivedMessage).isEqualTo(request);
     }
 
+    /**
+     * Inner dummy consumer.
+     */
     private static final class TestQueueConsumer {
-
-        private final Channel channel;
-        private final ObjectMapper objectMapper;
-
-        private TestQueueConsumer(Channel channel, ObjectMapper objectMapper) {
-            this.channel = channel;
-            this.objectMapper = objectMapper;
-        }
-
-        public void subscribe() {
-            try {
-                AMQPHelper.declareAndBindQueues(channel, QUEUE_NAME, EXCHANGE_NAME);
-                Queue<Delivery> messages = new ArrayBlockingQueue<>(10);
-                AMQPHelper.declareConsumer(channel, objectMapper, messages, QUEUE_NAME, new TestResponseMapper(objectMapper));
-            } catch (IOException e) {
-                throw new IllegalStateException("Error when subscribing to TestQueueConsumer", e);
-            }
-        }
-    }
-
-    private static final class TestResponseMapper implements DeliveryMapper<String> {
 
         private final ImmutableMap<String, String> responsesByRequests = ImmutableMap.of(
                 REQUEST_1, RESPONSE_1,
@@ -103,18 +94,35 @@ public class WithRabbitMockConsumptionTest {
                 REQUEST_3, RESPONSE_3
         );
 
+        private final Queue<Delivery> receivedMessages = new ArrayBlockingQueue<>(10);
+
+        private final Channel channel;
+        private final ObjectMapper objectMapper;
         private final DeliveryMapper<String> requestMapper;
 
-        private TestResponseMapper(ObjectMapper objectMapper) {
-            requestMapper = JacksonDeliveryMapperFactory.forClass(objectMapper, String.class);
+        private TestQueueConsumer(Channel channel, ObjectMapper objectMapper) {
+            this.channel = channel;
+            this.objectMapper = objectMapper;
+            this.requestMapper = JacksonDeliveryMapperFactory.forClass(objectMapper, String.class);
         }
 
-        @Override
-        public String map(Delivery delivery) {
-            final String requestBody = requestMapper.map(delivery);
-            return responsesByRequests.get(requestBody);
+        public void subscribe() {
+            try {
+                AMQPHelper.declareAndBindQueues(channel, QUEUE_NAME, EXCHANGE_NAME);
+                final DeliveryMapper<String> responseMapper = buildResponseMapper();
+
+                AMQPHelper.declareConsumer(channel, objectMapper, receivedMessages, QUEUE_NAME, responseMapper);
+            } catch (IOException e) {
+                throw new IllegalStateException("Error when subscribing to TestQueueConsumer", e);
+            }
+        }
+
+        private DeliveryMapper<String> buildResponseMapper() {
+            return delivery -> {
+                final String requestContent = requestMapper.map(delivery);
+                return responsesByRequests.get(requestContent);
+            };
         }
     }
-
 
 }

@@ -27,16 +27,16 @@ class WithRabbitMockReplyNullTest {
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void should_emit_and_reply_null(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
-        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
+    void should_emit_and_reply_null(SenderOptions senderOptions, Queue<Delivery> receivedMessages) throws IOException {
+        Delivery actualResponse = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
+        assertThat(actualResponse).isNotNull();
 
-        assert replyMessage != null;
-        assertThat(objectMapper.readValue(replyMessage.getBody(), String.class))
-                .isNull();
+        final String actualResponseBody = objectMapper.readValue(actualResponse.getBody(), String.class);
+        assertThat(actualResponseBody).isNull();
 
-        assert messages != null;
-        assertThat(messages.isEmpty()).isFalse();
-        assertThat(objectMapper.readValue(messages.remove().getBody(), String.class))
-                .isEqualTo(MESSAGE_TO_SEND);
+        assertThat(receivedMessages).isNotNull();
+        assertThat(receivedMessages).isNotEmpty();
+        final String actualReceivedBody = objectMapper.readValue(receivedMessages.remove().getBody(), String.class);
+        assertThat(actualReceivedBody).isEqualTo(MESSAGE_TO_SEND);
     }
 }
