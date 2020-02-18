@@ -124,9 +124,23 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         return new WithRabbitMockBuilder();
     }
 
+
+    @Override
+    public void beforeAll(ExtensionContext extensionContext) {
+        this.embeddedBroker.start();
+    }
+
+    @Override
+    public void afterAll(ExtensionContext extensionContext) {
+        this.embeddedBroker.stop();
+    }
+
     @Override
     public void beforeEach(ExtensionContext context) throws IOException {
-        Connection conn = embeddedBroker.newConnection();
+        Store store = getStore(context);
+        store.put(P_RABBIT_CONNECTION, embeddedBroker.newConnection());
+
+        Connection conn = getRabbitConnection(context);
         Channel channel = conn.createChannel();
 
         Queue<Delivery> messages = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
@@ -143,8 +157,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         SenderOptions senderOptions = declareSenderOptions(conn, channel, SCHEDULER);
         ReceiverOptions receiverOptions = declareReceiverOptions(conn, SCHEDULER);
 
-        Store store = getStore(context);
-        store.put(P_RABBIT_CONNECTION, conn);
         store.put(P_RABBIT_CHANNEL, channel);
         store.put(P_RABBIT_SENDER_OPT, senderOptions);
         store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
@@ -236,16 +248,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
      */
     public ReceiverOptions getReceiverOptions(ExtensionContext context) {
         return getStore(context).get(P_RABBIT_RECEIVER_OPT, ReceiverOptions.class);
-    }
-
-    @Override
-    public void beforeAll(ExtensionContext extensionContext) {
-        this.embeddedBroker.start();
-    }
-
-    @Override
-    public void afterAll(ExtensionContext extensionContext) {
-        this.embeddedBroker.stop();
     }
 
     /**

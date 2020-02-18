@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
-import java.io.IOException;
 import java.util.Queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,12 +54,6 @@ class WithRabbitMockTest {
         assertThat(sender).isNotNull();
         assertThat(receiver).isNotNull();
         assertThat(messages).isNotNull();
-    }
-
-    @Test
-    void after_each_verification_channel_closed(Channel channel) throws IOException {
-        channel.getConnection().close();
-        assertThat(channel.getConnection().isOpen()).isFalse();
     }
 
     @Test
