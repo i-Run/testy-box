@@ -58,9 +58,7 @@ class AMQPReceiverTest {
                 throw new IllegalStateException(e);
             }
         };
-
         AMQPHelper.declareAndBindQueues(channel, QUEUE_NAME, EXCHANGE_NAME);
-        AMQPHelper.declareReplyQueue(channel);
 
         tested = AMQPReceiver.builder(QUEUE_NAME)
                 .objectMapper(objectMapper)

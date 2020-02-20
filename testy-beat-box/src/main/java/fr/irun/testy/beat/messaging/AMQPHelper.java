@@ -56,16 +56,6 @@ public final class AMQPHelper {
     }
 
     /**
-     * Declare the reply queue.
-     *
-     * @param channel The channel object used for communication.
-     * @throws IOException if an error occurred during queue declaration.
-     */
-    public static void declareReplyQueue(Channel channel) throws IOException {
-        channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, true, null);
-    }
-
-    /**
      * Declare Receiver Options for queue communication
      *
      * @param conn      The connection to use for communication
