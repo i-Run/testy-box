@@ -116,7 +116,7 @@ class WithRabbitMockTest {
         final String request = "obiwan";
         final String response = "kenobi";
 
-        receiver.consume(response);
+        receiver.consumeAndReply(response);
 
         final String actualResponse = AMQPHelper.emitWithReply(request, sender, EXCHANGE_1)
                 .map(deliveryToString)
@@ -124,10 +124,10 @@ class WithRabbitMockTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse).isEqualTo(response);
 
-        final Optional<String> actualRequest = receiver.pollMessage().map(deliveryToString);
+        final Optional<String> actualRequest = receiver.getNextMessage().map(deliveryToString);
         assertThat(actualRequest).contains(request);
 
-        assertThat(receiver.pollMessage()).isEmpty();
+        assertThat(receiver.getNextMessage()).isEmpty();
     }
 
     @Test
@@ -136,7 +136,7 @@ class WithRabbitMockTest {
         final String request = "anakin";
         final String response = "skywalker";
 
-        receiver.consume(response);
+        receiver.consumeAndReply(response);
 
         final String actualResponse = AMQPHelper.emitWithReply(request, sender, EXCHANGE_2)
                 .map(deliveryToString)
@@ -144,10 +144,10 @@ class WithRabbitMockTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse).isEqualTo(response);
 
-        final Optional<String> actualRequest = receiver.pollMessage().map(deliveryToString);
+        final Optional<String> actualRequest = receiver.getNextMessage().map(deliveryToString);
         assertThat(actualRequest).contains(request);
 
-        assertThat(receiver.pollMessage()).isEmpty();
+        assertThat(receiver.getNextMessage()).isEmpty();
     }
 
 }

@@ -30,7 +30,7 @@ class WithRabbitMockReplyNullTest {
 
     @Test
     void should_emit_and_reply_null(SenderOptions senderOptions, AMQPReceiver receiver) throws IOException {
-        receiver.consume(null);
+        receiver.consumeAndReply(null);
 
         final Function<Delivery, String> deliveryToString = d -> {
             try {
@@ -46,7 +46,7 @@ class WithRabbitMockReplyNullTest {
         final String actualResponseBody = deliveryToString.apply(actualResponse);
         assertThat(actualResponseBody).isNull();
 
-        final Optional<String> actualMessage = receiver.pollMessage()
+        final Optional<String> actualMessage = receiver.getNextMessage()
                 .map(deliveryToString);
         assertThat(actualMessage).contains(MESSAGE_TO_SEND);
     }

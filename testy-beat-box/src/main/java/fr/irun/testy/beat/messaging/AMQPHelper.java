@@ -94,18 +94,6 @@ public final class AMQPHelper {
     }
 
     /**
-     * Declare consumer to read messages received and respond a replyMessage.
-     *
-     * @param channel      The channel to use for communication
-     * @param messages     The messages received in a Queue
-     * @param queueName    The queue name for rabbit communication
-     * @param replyMessage The message used to reply to sender
-     */
-    public static void declareConsumer(Channel channel, Queue<Delivery> messages, String queueName, Object replyMessage) {
-        declareConsumer(channel, DEFAULT_OBJECT_MAPPER, messages, queueName, replyMessage);
-    }
-
-    /**
      * Declare a consumer on the given queue.
      *
      * @param channel      Channel of the AMQP broker.
@@ -213,7 +201,6 @@ public final class AMQPHelper {
         try {
             final byte[] content = objectMapper.writeValueAsBytes(message);
             final AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder()
-                    .replyTo(DEFAULT_RABBIT_REPLY_QUEUE_NAME)
                     .build();
             return new RpcClient.RpcRequest(properties, content);
         } catch (JsonProcessingException e) {

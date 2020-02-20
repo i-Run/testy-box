@@ -29,7 +29,6 @@ import java.util.Optional;
 
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareAndBindQueues;
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareReceiverOptions;
-import static fr.irun.testy.beat.messaging.AMQPHelper.declareReplyQueue;
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
 
 /**
@@ -142,7 +141,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
             final AMQPReceiver receiver = buildReceiverForQueue(channel, objectMapper, queue, exchange);
             store.put(P_RABBIT_AMQP_RECEIVER_PREFIX + queue, receiver);
         });
-        declareReplyQueue(channel);
 
         SenderOptions senderOptions = declareSenderOptions(conn, channel, SCHEDULER);
         ReceiverOptions receiverOptions = declareReceiverOptions(conn, SCHEDULER);
@@ -303,7 +301,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
          *
          * @param replyMessage Reply message (no more taken into account due to deprecation).
          * @return Builder instance.
-         * @deprecated Removed in version 1.3.0. Use instead {@link AMQPReceiver#consume(Object)} for the injected receiver.
+         * @deprecated Removed in version 1.3.0. Use instead {@link AMQPReceiver#consumeAndReply(Object)} for the injected receiver.
          */
         @Deprecated
         public WithRabbitMockBuilder declareReplyMessage(Object replyMessage) {

@@ -68,8 +68,8 @@ class AMQPReceiverTest {
     }
 
     @Test
-    void should_consume_with_constant_response() {
-        tested.consume(RESPONSE_BODY);
+    void should_get_next_message_after_consumption() {
+        tested.consumeAndReply(RESPONSE_BODY);
 
         final String actualResponse = AMQPHelper.emitWithReply(REQUEST_BODY, objectMapper, senderOptions, QUEUE_NAME, TIMEOUT)
                 .map(deliveryToStringMapper)
@@ -77,10 +77,10 @@ class AMQPReceiverTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse).isEqualTo(RESPONSE_BODY);
 
-        final Optional<String> actualMessage = tested.pollMessage()
+        final Optional<String> actualMessage = tested.getNextMessage()
                 .map(deliveryToStringMapper);
         assertThat(actualMessage).contains(REQUEST_BODY);
 
-        assertThat(tested.pollMessage()).isEmpty();
+        assertThat(tested.getNextMessage()).isEmpty();
     }
 }
