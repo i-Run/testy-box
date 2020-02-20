@@ -60,7 +60,7 @@ public final class EmbeddedBroker {
     }
 
     /**
-     * Open a new connection to the broker.
+     * Open a new connection on the broker.
      *
      * @return The opened connection.
      */

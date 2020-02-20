@@ -277,7 +277,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
                 return queuesAndExchanges.keySet().iterator().next();
             }
             throw new ParameterResolutionException("Unable to get the queue name for parameter " + AMQPReceiver.class
-                    + "Use annotation " + Named.class.getName());
+                    + " - use annotation " + Named.class.getName() + " to provide it");
         }
         return queueFromAnnotation;
     }
@@ -355,18 +355,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
          */
         public WithRabbitMockBuilder declareQueueAndExchange(String queueName, String exchangeQueueName) {
             queuesAndExchanges.put(queueName, exchangeQueueName);
-            return this;
-        }
-
-        /**
-         * Keep method to ensure compatibility with the existing tests.
-         *
-         * @param replyMessage Reply message (no more taken into account due to deprecation).
-         * @return Builder instance.
-         * @deprecated Removed in version 1.3.0. Use instead {@link AMQPReceiver#consumeAndReply(Object)} for the injected receiver.
-         */
-        @Deprecated
-        public WithRabbitMockBuilder declareReplyMessage(Object replyMessage) {
             return this;
         }
 
