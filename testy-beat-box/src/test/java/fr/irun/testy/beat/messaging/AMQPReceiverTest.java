@@ -14,8 +14,12 @@ import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -80,5 +84,28 @@ class AMQPReceiverTest {
         assertThat(actualMessage).contains(REQUEST_BODY);
 
         assertThat(tested.getNextMessage()).isEmpty();
+    }
+
+    @Test
+    void should_get_all_messages_after_consumption() {
+        tested.consumeAndReply(RESPONSE_BODY);
+
+        final int nbMessages = 10;
+        final String[] messages = IntStream.range(0, nbMessages)
+                .mapToObj(i -> "Request nb. " + i)
+                .toArray(String[]::new);
+
+        Stream.of(messages).forEach(m -> {
+            final String actualResponse = AMQPHelper.emitWithReply(m, objectMapper, senderOptions, QUEUE_NAME, TIMEOUT)
+                    .map(deliveryToStringMapper)
+                    .block();
+            assertThat(actualResponse).isNotNull();
+            assertThat(actualResponse).isEqualTo(RESPONSE_BODY);
+        });
+
+        final List<String> actualMessage = tested.getMessages()
+                .map(deliveryToStringMapper)
+                .collect(Collectors.toList());
+        assertThat(actualMessage).containsExactly(messages);
     }
 }

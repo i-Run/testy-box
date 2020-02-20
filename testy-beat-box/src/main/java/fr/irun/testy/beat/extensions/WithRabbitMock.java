@@ -30,6 +30,7 @@ import java.util.Optional;
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareAndBindQueues;
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareReceiverOptions;
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
+import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
 
 /**
  * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
@@ -165,6 +166,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     public void afterEach(ExtensionContext extensionContext) throws Exception {
         final Channel rabbitChannel = getRabbitChannel(extensionContext);
         if (rabbitChannel.isOpen()) {
+            deleteReplyQueue(rabbitChannel);
             rabbitChannel.close();
         }
         final Connection connection = getRabbitConnection(extensionContext);

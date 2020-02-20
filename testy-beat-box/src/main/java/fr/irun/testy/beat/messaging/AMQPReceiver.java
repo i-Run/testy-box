@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.stream.Stream;
 
 /**
  * AMQP Receiver used for the unit tests.
@@ -58,6 +59,15 @@ public final class AMQPReceiver {
      */
     public Optional<Delivery> getNextMessage() {
         return Optional.ofNullable(receivedMessages.poll());
+    }
+
+    /**
+     * Obtain all the messages delivered to this receiver.
+     *
+     * @return All the messages delivered to this receiver.
+     */
+    public Stream<Delivery> getMessages() {
+        return receivedMessages.stream();
     }
 
     /**

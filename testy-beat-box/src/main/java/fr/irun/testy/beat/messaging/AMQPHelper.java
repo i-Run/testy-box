@@ -52,7 +52,19 @@ public final class AMQPHelper {
         channel.exchangeDeclare(exchangeQueueName, BuiltinExchangeType.DIRECT, false, true, null);
         channel.queueBind(queueName, exchangeQueueName, "");
 
-        channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, true, null);
+        channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, false, null);
+    }
+
+    /**
+     * Delete the default reply-to queue.
+     * Do not auto delete the reply queue otherwise only one RPC message can be sent (the reply queue is deleted before sending the next one).
+     * This causes an error when trying to emit many messages during the same unit test.
+     *
+     * @param channel Channel to delete the queue.
+     * @throws IOException Error when deleting the queue.
+     */
+    public static void deleteReplyQueue(Channel channel) throws IOException {
+        channel.queueDelete(DEFAULT_RABBIT_REPLY_QUEUE_NAME);
     }
 
     /**
