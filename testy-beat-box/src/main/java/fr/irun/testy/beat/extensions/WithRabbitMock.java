@@ -118,21 +118,18 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     @Override
     public void beforeAll(ExtensionContext extensionContext) {
         this.embeddedBroker.start();
-        getStore(extensionContext).put(P_RABBIT_CONNECTION, embeddedBroker.newConnection());
     }
 
     @Override
-    public void afterAll(ExtensionContext extensionContext) throws IOException {
-        final Connection connection = getRabbitConnection(extensionContext);
-        if (connection.isOpen()) {
-            connection.close();
-        }
+    public void afterAll(ExtensionContext extensionContext) {
         this.embeddedBroker.stop();
     }
 
     @Override
     public void beforeEach(ExtensionContext context) throws IOException {
         Store store = getStore(context);
+
+        store.put(P_RABBIT_CONNECTION, embeddedBroker.newConnection());
 
         Connection conn = getRabbitConnection(context);
         Channel channel = conn.createChannel();
@@ -171,6 +168,10 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         final Channel rabbitChannel = getRabbitChannel(extensionContext);
         if (rabbitChannel.isOpen()) {
             rabbitChannel.close();
+        }
+        final Connection connection = getRabbitConnection(extensionContext);
+        if (connection.isOpen()) {
+            connection.close();
         }
     }
 
@@ -299,6 +300,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
         /**
          * Keep method to ensure compatibility with the existing tests.
+         *
          * @param replyMessage Reply message (no more taken into account due to deprecation).
          * @return Builder instance.
          * @deprecated Removed in version 1.3.0. Use instead {@link AMQPReceiver#consume(Object)} for the injected receiver.
