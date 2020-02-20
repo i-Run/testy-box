@@ -33,59 +33,119 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
 import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
 
 /**
- * Allow getting a Mock of a Rabbit channel in Tests. Building also Sender and Receiver Options.
+ * Allow getting a rabbit broker in tests.
+ * <ul>
+ *     <li>Can be configured with a customized {@link ObjectMapper}</li>
+ *     <li>Starts an embedded AMQP broker</li>
+ *     <li>Opens an AMQP connection and channel on each test (closes after)</li>
+ *     <li>Builds sender and receiver options, injectable as test parameters</li>
+ *     <li>Can declare many queues with related exchanges</li>
+ *     <li>For each queue, builds an {@link AMQPReceiver}, injectable as test parameter</li>
+ * </ul>
  * <p>
  * Usage :
  * <pre style="code">
- *     {@literal @}RegisterExtension
- *     WithRabbitMock wRabbitMock = WithRabbitMock.builder()
- *             .declareQueueAndExchange("queue-name", "exchange-queue-name")
- *             .declareReplyMessage("Reception OK. Reply Message !")
+ *     private static final String QUEUE_1 = "test-queue-1";
+ *     private static final String QUEUE_2 = "test-queue-2";
+ *     private static final String EXCHANGE_1 = "test-exchange-1";
+ *     private static final String EXCHANGE_2 = "test-exchange-2";
+ *
+ *     private static final WithObjectMapper WITH_OBJECT_MAPPER = WithObjectMapper.builder()
+ *             .addModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule())
  *             .build();
+ *     private static final WithRabbitMock WITH_RABBIT = WithRabbitMock.builder()
+ *             .withObjectMapper(WITH_OBJECT_MAPPER)
+ *             .declareQueueAndExchange(QUEUE_1, EXCHANGE_1)
+ *             .declareQueueAndExchange(QUEUE_2, EXCHANGE_2)
+ *             .build();
+ *     {@literal @}RegisterExtension
+ *     {@literal @}SuppressWarnings("unused")
+ *     static final ChainedExtension CHAIN = ChainedExtension.outer(WITH_OBJECT_MAPPER)
+ *             .append(WITH_RABBIT)
+ *             .register();
  * </pre>
  * <p>
- * Usage without reply message (return null as reply message) :
- * <pre style="code">
- *     {@literal @}RegisterExtension
- *     WithRabbitMock wRabbitMock = WithRabbitMock.builder()
- *             .declareQueueAndExchange("queue-name", "exchange-queue-name")
- *             .build();
- * </pre>
+ * Example to test a "listener" class.
+ * A "listener" is expected to:
+ * <ul>
+ *     <li>Declare the queue and exchange</li>
+ *     <li>Consume the messages from the queue</li>
+ *     <li>Apply a treatment on the message (specific to each listener)</li>
+ *     <li>Reply another message on the reply queue</li>
+ * </ul>
  * <p>
- * Assert example to test a "listener" class :
+ * Note that the request and response can be customized objects, serialized by the input {@link ObjectMapper}.
  * <pre style="code">
  *     {@literal @}Test
- *     void test_class_communication(SenderOptions senderOptions) {
- *          Supplier&lt;String&gt; idGenerator = () -&gt; "ID" + Math.random();
+ *     void should_consume_queue_and_reply_message(SenderOptions senderOptions, ObjectMapper objectMapper) {
+ *          // Here the tested listener declare and consumes QUEUE_1
  *          tested.subscribe();
  *
- *          assertThat(AMQPHelper.emitWithReply("message to send to tested", senderOptions, "exchange-queue-name", idGenerator)
- *                 .flatMap(delivery -&gt; Mono.fromCallable(() -&gt; objectMapper.readValue(delivery.getBody(), String.class))).block())
- *                 .isEqualTo("message received from tested");
+ *          final String request = "message sent to tested";
+ *          final String actualResponse = AMQPHelper.emitWithReply(request, senderOptions, objectMapper, EXCHANGE_1)
+ *                  .flatMap(delivery -&gt; Mono.fromCallable(() -&gt; objectMapper.readValue(delivery.getBody(), String.class)))
+ *                  .block();
+ *          assertThat(actualResponse).isEqualTo("expected message replied by tested listener");
  *      }
  * </pre>
  * <p>
- * Assert example to test a "sender / emitter" class :
+ * Assert example to test an "emitter" class.
+ * An "emitter" is expected to:
+ * <ul>
+ *     <li>Send a message on the queue/exchange</li>
+ *     <li>Treat the response.</li>
+ * </ul>
+ * <p>
+ * Note that:
+ * <ul>
+ *     <li>An {@link AMQPReceiver} can be injected to the test, consuming on the queue</li>
+ *     <li>This receiver listens to the queue and sends reply with {@link AMQPReceiver#consumeAndReply(Object)}</li>
+ *     <li>This receiver provides the messages pushed into the queue by the tested instance with
+ *     {@link AMQPReceiver#getMessages()} and {@link AMQPReceiver#getNextMessage()}</li>
+ *     <li>If more than one queue has been declared into {@link WithRabbitMock},
+ *     use the annotation {@link Named} to discriminate the {@link AMQPReceiver} parameters</li>
+ *     <li>The request and response can be customized objects, serialized by the input {@link ObjectMapper}.</li>
+ * </ul>
+ * <p>
  * <pre style="code">
  *     {@literal @}Test
- *     void test_class_communication(Queue&lt;Delivery&gt; messagesReceived) throws IOException {
+ *     void should_emit_message_and_manage_response(@javax.inject.Named(QUEUE_1) AMQPReceiver receiver,
+ *                                                  ObjectMapper objectMapper) throws IOException {
+ *         final String response = "response from receiver";
+ *         receiver.consumeAndReply(response);
  *
  *         tested.execute();
  *
- *         assertThat(objectMapper.readValue(messagesReceived.remove().getBody(), String.class))
- *                 .isEqualTo("message sent by tested");
+ *         final List&lt;String&gt; actualEmittedMessages = receiver.getMessages()
+ *                 .map(delivery &gt; {
+ *                     try {
+ *                         return objectMapper.readValue(delivery.getBody(), String.class);
+ *                     } catch (IOException e) {
+ *                         throw new IllegalStateException(e);
+ *                     }
+ *                 }).collect(Collectors.toList());
+ *         assertThat(actualEmittedMessages).containsExactly("message sent by tested");
  *     }
  *
- *     //With a custom consumer
+ *     // Test when an error is replied
  *     {@literal @}Test
- *     void test_class_communication(Channel channel) throws IOException {
- *         Queue&lt;Delivery&gt; messagesReceived = new ArrayBlockingQueue&lt;&gt;(QUEUE_CAPACITY);
- *         AMQPHelper.declareConsumer(channel, messagesReceived, "queue-name", "message received");
+ *     void should_fail_if_listener_answered_with_error(@javax.inject.Named(QUEUE_1) AMQPReceiver receiver,
+ *                                                      ObjectMapper objectMapper) throws IOException {
+ *         final Throwable error = new Exception("Mocked receiver error");
+ *         receiver.consumeAndReply(error);
  *
- *         tested.execute();
+ *         assertThatThrownBy(tested::execute)
+ *                 .isInstanceOf(MyCustomException.class);
  *
- *         assertThat(objectMapper.readValue(messagesReceived.remove().getBody(), String.class))
- *                 .isEqualTo("message sent by tested");
+ *         final List&lt;String&gt; actualEmittedMessages = receiver.getMessages()
+ *                 .map(delivery &gt; {
+ *                     try {
+ *                         return objectMapper.readValue(delivery.getBody(), String.class);
+ *                     } catch (IOException e) {
+ *                         throw new IllegalStateException(e);
+ *                     }
+ *                 }).collect(Collectors.toList());
+ *         assertThat(actualEmittedMessages).containsExactly("message sent by tested");
  *     }
  * </pre>
  */
