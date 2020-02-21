@@ -79,12 +79,12 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  * <pre style="code">
  *     {@literal @}Test
  *     void should_consume_queue_and_reply_message(SenderOptions senderOptions, ObjectMapper objectMapper) {
- *          // Here the tested listener declare and consumes QUEUE_1
+ *          // Here the tested listener creates and consumes QUEUE_1
  *          tested.subscribe();
  *
  *          final String request = "message sent to tested";
  *          final String actualResponse = AMQPHelper.emitWithReply(request, senderOptions, objectMapper, EXCHANGE_1)
- *                  .flatMap(delivery -&gt; Mono.fromCallable(() -&gt; objectMapper.readValue(delivery.getBody(), String.class)))
+ *                  .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
  *                  .block();
  *          assertThat(actualResponse).isEqualTo("expected message replied by tested listener");
  *      }
@@ -118,13 +118,8 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *         tested.execute();
  *
  *         final List&lt;String&gt; actualEmittedMessages = receiver.getMessages()
- *                 .map(delivery &gt; {
- *                     try {
- *                         return objectMapper.readValue(delivery.getBody(), String.class);
- *                     } catch (IOException e) {
- *                         throw new IllegalStateException(e);
- *                     }
- *                 }).collect(Collectors.toList());
+ *                 .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
+ *                 .collect(Collectors.toList());
  *         assertThat(actualEmittedMessages).containsExactly("message sent by tested");
  *     }
  *
@@ -139,13 +134,8 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *                 .isInstanceOf(MyCustomException.class);
  *
  *         final List&lt;String&gt; actualEmittedMessages = receiver.getMessages()
- *                 .map(delivery &gt; {
- *                     try {
- *                         return objectMapper.readValue(delivery.getBody(), String.class);
- *                     } catch (IOException e) {
- *                         throw new IllegalStateException(e);
- *                     }
- *                 }).collect(Collectors.toList());
+ *                 .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
+ *                 .collect(Collectors.toList());
  *         assertThat(actualEmittedMessages).containsExactly("message sent by tested");
  *     }
  * </pre>

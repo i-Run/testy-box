@@ -3,7 +3,6 @@ package fr.irun.testy.beat.extensions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import fr.irun.testy.core.extensions.ChainedExtension;
@@ -15,10 +14,9 @@ import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import javax.inject.Named;
-import java.io.IOException;
 import java.util.Optional;
-import java.util.function.Function;
 
+import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -46,7 +44,7 @@ class WithRabbitMockTest {
             .append(WITH_RABBIT_MOCK)
             .register();
 
-    private Function<Delivery, String> deliveryToString;
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp(Connection connection,
@@ -56,6 +54,7 @@ class WithRabbitMockTest {
                @Named(QUEUE_1) AMQPReceiver receiver1,
                @Named(QUEUE_2) AMQPReceiver receiver2,
                ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
 
         assertThat(connection).isNotNull();
         assertThat(connection.isOpen()).isTrue();
@@ -69,14 +68,6 @@ class WithRabbitMockTest {
         assertThat(receiver1.queueName).isEqualTo(QUEUE_1);
         assertThat(receiver2).isNotNull();
         assertThat(receiver2.queueName).isEqualTo(QUEUE_2);
-
-        this.deliveryToString = d -> {
-            try {
-                return objectMapper.readValue(d.getBody(), String.class);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
-        };
     }
 
     @Test
@@ -119,12 +110,13 @@ class WithRabbitMockTest {
         receiver.consumeAndReply(response);
 
         final String actualResponse = AMQPHelper.emitWithReply(request, sender, EXCHANGE_1)
-                .map(deliveryToString)
+                .map(d -> readDeliveryValue(d, objectMapper, String.class))
                 .block();
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse).isEqualTo(response);
 
-        final Optional<String> actualRequest = receiver.getNextMessage().map(deliveryToString);
+        final Optional<String> actualRequest = receiver.getNextMessage()
+                .map(d -> readDeliveryValue(d, objectMapper, String.class));
         assertThat(actualRequest).contains(request);
 
         assertThat(receiver.getNextMessage()).isEmpty();
@@ -139,12 +131,13 @@ class WithRabbitMockTest {
         receiver.consumeAndReply(response);
 
         final String actualResponse = AMQPHelper.emitWithReply(request, sender, EXCHANGE_2)
-                .map(deliveryToString)
+                .map(d -> readDeliveryValue(d, objectMapper, String.class))
                 .block();
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse).isEqualTo(response);
 
-        final Optional<String> actualRequest = receiver.getNextMessage().map(deliveryToString);
+        final Optional<String> actualRequest = receiver.getNextMessage()
+                .map(d -> readDeliveryValue(d, objectMapper, String.class));
         assertThat(actualRequest).contains(request);
 
         assertThat(receiver.getNextMessage()).isEmpty();

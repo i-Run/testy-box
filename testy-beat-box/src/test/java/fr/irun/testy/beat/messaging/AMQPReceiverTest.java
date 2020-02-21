@@ -3,7 +3,6 @@ package fr.irun.testy.beat.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.extensions.WithRabbitMock;
 import fr.irun.testy.core.extensions.ChainedExtension;
 import fr.irun.testy.core.extensions.WithObjectMapper;
@@ -16,11 +15,11 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AMQPReceiverTest {
@@ -47,7 +46,6 @@ class AMQPReceiverTest {
 
     private SenderOptions senderOptions;
     private ObjectMapper objectMapper;
-    private Function<Delivery, String> deliveryToStringMapper;
 
     private AMQPReceiver tested;
 
@@ -55,13 +53,6 @@ class AMQPReceiverTest {
     void setUp(Channel channel, SenderOptions senderOptions, ObjectMapper objectMapper) throws IOException {
         this.senderOptions = senderOptions;
         this.objectMapper = objectMapper;
-        this.deliveryToStringMapper = d -> {
-            try {
-                return objectMapper.readValue(d.getBody(), String.class);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
-        };
         AMQPHelper.declareAndBindQueues(channel, QUEUE_NAME, EXCHANGE_NAME);
 
         tested = AMQPReceiver.builder(QUEUE_NAME)
@@ -74,13 +65,13 @@ class AMQPReceiverTest {
         tested.consumeAndReply(RESPONSE_BODY);
 
         final String actualResponse = AMQPHelper.emitWithReply(REQUEST_BODY, objectMapper, senderOptions, QUEUE_NAME, TIMEOUT)
-                .map(deliveryToStringMapper)
+                .map(d -> readDeliveryValue(d, objectMapper, String.class))
                 .block();
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse).isEqualTo(RESPONSE_BODY);
 
         final Optional<String> actualMessage = tested.getNextMessage()
-                .map(deliveryToStringMapper);
+                .map(d -> readDeliveryValue(d, objectMapper, String.class));
         assertThat(actualMessage).contains(REQUEST_BODY);
 
         assertThat(tested.getNextMessage()).isEmpty();
@@ -97,14 +88,14 @@ class AMQPReceiverTest {
 
         Stream.of(messages).forEach(m -> {
             final String actualResponse = AMQPHelper.emitWithReply(m, objectMapper, senderOptions, QUEUE_NAME, TIMEOUT)
-                    .map(deliveryToStringMapper)
+                    .map(d -> readDeliveryValue(d, objectMapper, String.class))
                     .block();
             assertThat(actualResponse).isNotNull();
             assertThat(actualResponse).isEqualTo(RESPONSE_BODY);
         });
 
         final List<String> actualMessage = tested.getMessages()
-                .map(deliveryToStringMapper)
+                .map(d -> readDeliveryValue(d, objectMapper, String.class))
                 .collect(Collectors.toList());
         assertThat(actualMessage).containsExactly(messages);
     }

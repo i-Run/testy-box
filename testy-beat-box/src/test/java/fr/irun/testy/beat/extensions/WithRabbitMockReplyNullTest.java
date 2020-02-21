@@ -10,8 +10,8 @@ import reactor.rabbitmq.SenderOptions;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.function.Function;
 
+import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class WithRabbitMockReplyNullTest {
@@ -32,22 +32,14 @@ class WithRabbitMockReplyNullTest {
     void should_emit_and_reply_null(SenderOptions senderOptions, AMQPReceiver receiver) throws IOException {
         receiver.consumeAndReply(null);
 
-        final Function<Delivery, String> deliveryToString = d -> {
-            try {
-                return OBJECT_MAPPER.readValue(d.getBody(), String.class);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
-        };
-
         Delivery actualResponse = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
         assertThat(actualResponse).isNotNull();
 
-        final String actualResponseBody = deliveryToString.apply(actualResponse);
+        final String actualResponseBody = readDeliveryValue(actualResponse, OBJECT_MAPPER, String.class);
         assertThat(actualResponseBody).isNull();
 
         final Optional<String> actualMessage = receiver.getNextMessage()
-                .map(deliveryToString);
+                .map(d -> readDeliveryValue(d, OBJECT_MAPPER, String.class));
         assertThat(actualMessage).contains(MESSAGE_TO_SEND);
     }
 }

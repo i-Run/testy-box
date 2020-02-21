@@ -15,25 +15,51 @@ import java.util.concurrent.TimeoutException;
  */
 public final class QpidEmbeddedBroker implements EmbeddedBroker {
 
-    private static final String CONFIG_FILE = "embedded-broker.json";
-    private static final String CONNECTION_USERNAME = "obiwan";
-    private static final String CONNECTION_PASS = "kenobi";
-    private static final String HOST = "localhost";
-    private static final int PORT = 9595;
+    private static final String DEFAULT_CONFIG_FILE = "embedded-broker.json";
+    private static final String DEFAULT_HOST = "localhost";
+    private static final int DEFAULT_PORT = 9595;
+    private static final String DEFAULT_USERNAME = "obiwan";
+    private static final String DEFAULT_PASS = "kenobi";
 
     private final SystemLauncher systemLauncher;
     private final ConnectionFactory connectionFactory;
 
+    private final String configurationFile;
+
     /**
      * Default constructor for the broker.
+     * By default the values are:
+     * <ul>
+     *     <li>Configuration file: embedded-broker.json (provided by testy-beat-box)</li>
+     *     <li>Host: localhost</li>
+     *     <li>Port: 9595</li>
+     *     <li>Username: obiwan</li>
+     * </ul>
      */
     public QpidEmbeddedBroker() {
+        this(DEFAULT_CONFIG_FILE, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USERNAME, DEFAULT_PASS);
+    }
+
+    /**
+     * Create a customized broker.
+     * @param configurationFile The path to the configuration file of the broker.
+     * @param host The host running the broker.
+     * @param port The port to access to a connection.
+     * @param username Username to get a connection.
+     * @param password Password to get a connection.
+     */
+    public QpidEmbeddedBroker(String configurationFile,
+                              String host,
+                              int port,
+                              String username,
+                              String password) {
+        this.configurationFile = configurationFile;
         this.systemLauncher = new SystemLauncher();
         this.connectionFactory = new ConnectionFactory();
-        connectionFactory.setUsername(CONNECTION_USERNAME);
-        connectionFactory.setPassword(CONNECTION_PASS);
-        connectionFactory.setHost(HOST);
-        connectionFactory.setPort(PORT);
+        connectionFactory.setHost(host);
+        connectionFactory.setPort(port);
+        connectionFactory.setUsername(username);
+        connectionFactory.setPassword(password);
     }
 
     /**
@@ -49,9 +75,9 @@ public final class QpidEmbeddedBroker implements EmbeddedBroker {
     }
 
     private Map<String, Object> createConfiguration() {
-        URL initialConfig = getClass().getClassLoader().getResource(CONFIG_FILE);
+        URL initialConfig = getClass().getClassLoader().getResource(configurationFile);
         if (initialConfig == null) {
-            throw new IllegalStateException("Not found config file " + CONFIG_FILE);
+            throw new IllegalStateException("Not found config file " + configurationFile);
         }
 
         return ImmutableMap.<String, Object>builder()
