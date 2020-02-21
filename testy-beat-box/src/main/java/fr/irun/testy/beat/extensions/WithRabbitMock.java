@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import fr.irun.testy.beat.brokers.EmbeddedBroker;
+import fr.irun.testy.beat.brokers.QpidEmbeddedBroker;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -158,14 +158,14 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
 
-    private final EmbeddedBroker embeddedBroker;
+    private final QpidEmbeddedBroker embeddedBroker;
     private final Map<String, String> queuesAndExchanges;
     @Nullable
     private final WithObjectMapper withObjectMapper;
 
     private WithRabbitMock(Map<String, String> queuesAndExchanges,
                            @Nullable WithObjectMapper withObjectMapper) {
-        this.embeddedBroker = new EmbeddedBroker();
+        this.embeddedBroker = new QpidEmbeddedBroker();
         this.queuesAndExchanges = queuesAndExchanges;
         this.withObjectMapper = withObjectMapper;
     }
