@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import fr.irun.testy.beat.brokers.EmbeddedBroker;
 import fr.irun.testy.beat.brokers.QpidEmbeddedBroker;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import fr.irun.testy.core.extensions.WithObjectMapper;
@@ -158,14 +159,15 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
 
-    private final QpidEmbeddedBroker embeddedBroker;
+    private final EmbeddedBroker embeddedBroker;
     private final Map<String, String> queuesAndExchanges;
     @Nullable
     private final WithObjectMapper withObjectMapper;
 
-    private WithRabbitMock(Map<String, String> queuesAndExchanges,
+    private WithRabbitMock(EmbeddedBroker embeddedBroker,
+                           Map<String, String> queuesAndExchanges,
                            @Nullable WithObjectMapper withObjectMapper) {
-        this.embeddedBroker = new QpidEmbeddedBroker();
+        this.embeddedBroker = embeddedBroker;
         this.queuesAndExchanges = queuesAndExchanges;
         this.withObjectMapper = withObjectMapper;
     }
@@ -345,6 +347,20 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         private final ImmutableMap.Builder<String, String> queuesAndExchanges = ImmutableMap.builder();
         @Nullable
         private WithObjectMapper withObjectMapper;
+        @Nullable
+        private EmbeddedBroker embeddedBroker;
+
+        /**
+         * Define a customized embedded broker.
+         * If not set, a {@link fr.irun.testy.beat.brokers.QpidEmbeddedBroker} will be used by default.
+         *
+         * @param embeddedBroker The embedded broker.
+         * @return Builder instance.
+         */
+        public WithRabbitMockBuilder withEmbeddedBroker(EmbeddedBroker embeddedBroker) {
+            this.embeddedBroker = embeddedBroker;
+            return this;
+        }
 
         /**
          * Declare the queues and exchange for rabbit communication
@@ -375,7 +391,10 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
          * @return The extension
          */
         public WithRabbitMock build() {
-            return new WithRabbitMock(queuesAndExchanges.build(), withObjectMapper);
+            final EmbeddedBroker broker = Optional.ofNullable(this.embeddedBroker)
+                    .orElseGet(QpidEmbeddedBroker::new);
+
+            return new WithRabbitMock(broker, queuesAndExchanges.build(), withObjectMapper);
         }
     }
 }
