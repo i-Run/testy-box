@@ -51,18 +51,18 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     private static final String EXCHANGE_1 = "test-exchange-1";
  *     private static final String EXCHANGE_2 = "test-exchange-2";
  *
- *     private static final WithObjectMapper WITH_OBJECT_MAPPER = WithObjectMapper.builder()
+ *     private static final WithObjectMapper withObjectMapper = WithObjectMapper.builder()
  *             .addModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule())
  *             .build();
- *     private static final WithRabbitMock WITH_RABBIT = WithRabbitMock.builder()
- *             .withObjectMapper(WITH_OBJECT_MAPPER)
+ *     private static final WithRabbitMock withRabbit = WithRabbitMock.builder()
+ *             .withObjectMapper(withObjectMapper)
  *             .declareQueueAndExchange(QUEUE_1, EXCHANGE_1)
  *             .declareQueueAndExchange(QUEUE_2, EXCHANGE_2)
  *             .build();
  *     {@literal @}RegisterExtension
  *     {@literal @}SuppressWarnings("unused")
- *     static final ChainedExtension CHAIN = ChainedExtension.outer(WITH_OBJECT_MAPPER)
- *             .append(WITH_RABBIT)
+ *     static final ChainedExtension chain = ChainedExtension.outer(withObjectMapper)
+ *             .append(withRabbit)
  *             .register();
  * </pre>
  * <p>
