@@ -107,7 +107,7 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     use the annotation {@link Named} to discriminate the {@link AMQPReceiver} parameters</li>
  *     <li>The request and response can be customized objects, serialized by the input {@link ObjectMapper}.</li>
  * </ul>
- * <p>
+ *
  * <pre style="code">
  *     {@literal @}Test
  *     void should_emit_message_and_manage_response(@javax.inject.Named(QUEUE_1) AMQPReceiver receiver,

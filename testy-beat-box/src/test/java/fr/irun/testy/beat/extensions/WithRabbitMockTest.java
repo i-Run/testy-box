@@ -19,9 +19,6 @@ import java.util.Optional;
 import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Test verifying if the expected objects are injected by {@link WithRabbitMock} extension.
- */
 class WithRabbitMockTest {
 
     private static final String QUEUE_1 = "test-queue-1";

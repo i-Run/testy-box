@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.rabbitmq.SenderOptions;
 
-import java.io.IOException;
 import java.util.Optional;
 
 import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
@@ -29,7 +28,7 @@ class WithRabbitMockReplyNullTest {
             .build();
 
     @Test
-    void should_emit_and_reply_null(SenderOptions senderOptions, AMQPReceiver receiver) throws IOException {
+    void should_emit_and_reply_null(SenderOptions senderOptions, AMQPReceiver receiver) {
         receiver.consumeAndReply(null);
 
         Delivery actualResponse = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
