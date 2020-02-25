@@ -1,18 +1,16 @@
 package fr.irun.testy.beat.extensions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.messaging.AMQPHelper;
-import org.junit.jupiter.api.BeforeEach;
+import fr.irun.testy.beat.messaging.AMQPReceiver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
-import java.io.IOException;
-import java.util.Queue;
+import java.util.Optional;
 
+import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class WithRabbitMockReplyNullTest {
@@ -21,59 +19,26 @@ class WithRabbitMockReplyNullTest {
     private static final String EXCHANGE_NAME = "exchangeName";
     private static final String MESSAGE_TO_SEND = "sendThisMessage";
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @RegisterExtension
-    static WithRabbitMock withRabbitMock = WithRabbitMock.builder()
+    @SuppressWarnings("unused")
+    static final WithRabbitMock WITH_RABBIT_MOCK = WithRabbitMock.builder()
             .declareQueueAndExchange(QUEUE_NAME, EXCHANGE_NAME)
             .build();
-    private static ObjectMapper objectMapper = new ObjectMapper();
-
-    @BeforeEach
-    void setUp(Channel channel, SenderOptions sender, ReceiverOptions receiver, Queue<String> messages) {
-        assertThat(channel).isInstanceOf(Channel.class);
-        assertThat(sender).isInstanceOf(SenderOptions.class);
-        assertThat(receiver).isInstanceOf(ReceiverOptions.class);
-        assertThat(messages).isInstanceOf(Queue.class);
-        assertThat(channel).isNotNull();
-        assertThat(sender).isNotNull();
-        assertThat(receiver).isNotNull();
-        assertThat(messages).isNotNull();
-    }
 
     @Test
-    void should_inject_channel(Channel tested) {
-        assertThat(tested).isInstanceOf(Channel.class);
-        assertThat(tested).isNotNull();
-    }
+    void should_emit_and_reply_null(SenderOptions senderOptions, AMQPReceiver receiver) {
+        receiver.consumeAndReply(null);
 
-    @Test
-    void should_inject_sender(SenderOptions tested) {
-        assertThat(tested).isInstanceOf(SenderOptions.class);
-        assertThat(tested).isNotNull();
-    }
+        Delivery actualResponse = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
+        assertThat(actualResponse).isNotNull();
 
-    @Test
-    void should_inject_receiver(ReceiverOptions tested) {
-        assertThat(tested).isInstanceOf(ReceiverOptions.class);
-        assertThat(tested).isNotNull();
-    }
+        final String actualResponseBody = readDeliveryValue(actualResponse, OBJECT_MAPPER, String.class);
+        assertThat(actualResponseBody).isNull();
 
-    @Test
-    void should_inject_queue(Queue<Delivery> tested) {
-        assertThat(tested).isInstanceOf(Queue.class);
-        assertThat(tested).isNotNull();
-    }
-
-    @Test
-    void should_listen_and_reply_null(SenderOptions senderOptions, Queue<Delivery> messages) throws IOException {
-        Delivery replyMessage = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
-
-        assert replyMessage != null;
-        assertThat(objectMapper.readValue(replyMessage.getBody(), String.class))
-                .isNull();
-
-        assert messages != null;
-        assertThat(messages.isEmpty()).isFalse();
-        assertThat(objectMapper.readValue(messages.remove().getBody(), String.class))
-                .isEqualTo(MESSAGE_TO_SEND);
+        final Optional<String> actualMessage = receiver.getNextMessage()
+                .map(d -> readDeliveryValue(d, OBJECT_MAPPER, String.class));
+        assertThat(actualMessage).contains(MESSAGE_TO_SEND);
     }
 }

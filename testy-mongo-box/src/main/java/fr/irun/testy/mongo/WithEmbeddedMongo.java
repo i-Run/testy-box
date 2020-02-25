@@ -58,7 +58,7 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
     private static final String P_MONGO_DB_NAME = "mongoDbName";
 
     private final String databaseName;
-    private final AtomicReference<ReactiveMongoDatabaseFactory> mongoFactory;
+    private final AtomicReference<ReactiveMongoDatabaseFactory> atomicMongoFactory;
 
     public WithEmbeddedMongo() {
         this(UUID.randomUUID().toString());
@@ -66,7 +66,7 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
 
     private WithEmbeddedMongo(String databaseName) {
         this.databaseName = databaseName;
-        this.mongoFactory = new AtomicReference<>();
+        this.atomicMongoFactory = new AtomicReference<>();
     }
 
     /**
@@ -77,7 +77,7 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
      * @return the {@link ReactiveMongoDatabaseFactory} created in the beforeAll.
      */
     public ReactiveMongoDatabaseFactory getMongoFactory() {
-        return mongoFactory.updateAndGet(old -> {
+        return atomicMongoFactory.updateAndGet(old -> {
             assert old != null : "No Mongo factory initialized !";
             return old;
         });
@@ -113,7 +113,7 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
                 databaseName));
 
         ReactiveMongoDatabaseFactory mongoFactory = new SimpleReactiveMongoDatabaseFactory(mongo, databaseName);
-        if (!this.mongoFactory.compareAndSet(null, mongoFactory)) {
+        if (!this.atomicMongoFactory.compareAndSet(null, mongoFactory)) {
             throw new IllegalStateException("Mongo factory already initialized ! Multiple Mongo factory not supported !");
         }
 
