@@ -11,8 +11,12 @@ function next_snapshot() {
     local parsedVersion; IFS='.' read -ra parsedVersion <<< "$version"
 
     if [ "${#parsedVersion[@]}" = "3" ]; then
-        echo "${parsedVersion[0]}.$(( parsedVersion[1] + 1 )).0-SNAPSHOT"
-        return 0;
+        if [[ "${CI_COMMIT_REF_NAME}" =~ ^support/.* ]]; then
+          echo "${parsedVersion[0]}.$(( parsedVersion[1] )).$(( parsedVersion[2] + 1 ))-SNAPSHOT"
+        else
+          echo "${parsedVersion[0]}.$(( parsedVersion[1] + 1 )).0-SNAPSHOT"
+          return 0;
+        fi;
     elif [ "${#parsedVersion[@]}" = "2" ]; then
         echo "${parsedVersion[0]}.$(( parsedVersion[1] + 1 ))-SNAPSHOT"
         return 0;
