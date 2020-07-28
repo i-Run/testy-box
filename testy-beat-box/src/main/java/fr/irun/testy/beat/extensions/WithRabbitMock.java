@@ -6,6 +6,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import fr.irun.testy.beat.brokers.EmbeddedBroker;
 import fr.irun.testy.beat.brokers.QpidEmbeddedBroker;
+import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -207,6 +208,8 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         final ObjectMapper objectMapper = Optional.ofNullable(withObjectMapper)
                 .map(wom -> wom.getObjectMapper(context))
                 .orElseGet(ObjectMapper::new);
+
+        AMQPHelper.declareReplyQueue(channel);
 
         queuesAndExchanges.forEach((queue, exchange) -> {
             final AMQPReceiver receiver = buildReceiverForQueue(channel, objectMapper, queue, exchange);

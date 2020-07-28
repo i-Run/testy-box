@@ -48,7 +48,16 @@ public final class AMQPHelper {
         channel.queueDeclare(queueName, false, false, true, null);
         channel.exchangeDeclare(exchangeQueueName, BuiltinExchangeType.DIRECT, false, true, null);
         channel.queueBind(queueName, exchangeQueueName, "");
+    }
 
+    /**
+     * Declare the default reply-queue.
+     * This queue is declared separately because we do not want to auto-delete it (otherwise only one RPC request can be sent by test).
+     *
+     * @param channel Channel to declare the queue.
+     * @throws IOException Error when declaring the queue.
+     */
+    public static void declareReplyQueue(Channel channel) throws IOException {
         channel.queueDeclare(DEFAULT_RABBIT_REPLY_QUEUE_NAME, false, false, false, null);
     }
 
