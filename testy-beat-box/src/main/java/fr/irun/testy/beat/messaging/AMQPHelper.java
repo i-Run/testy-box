@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Delivery;
@@ -14,8 +13,6 @@ import com.rabbitmq.client.Envelope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
-import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.RpcClient;
 import reactor.rabbitmq.Sender;
 import reactor.rabbitmq.SenderOptions;
@@ -65,34 +62,6 @@ public final class AMQPHelper {
      */
     public static void deleteReplyQueue(Channel channel) throws IOException {
         channel.queueDelete(DEFAULT_RABBIT_REPLY_QUEUE_NAME);
-    }
-
-    /**
-     * Declare Receiver Options for queue communication
-     *
-     * @param conn      The connection to use for communication
-     * @param scheduler The scheduler to use for communication
-     * @return The built receiver options
-     */
-    public static ReceiverOptions declareReceiverOptions(Connection conn, Scheduler scheduler) {
-        return new ReceiverOptions()
-                .connectionMono(Mono.fromCallable(() -> conn))
-                .connectionSubscriptionScheduler(scheduler);
-    }
-
-    /**
-     * Declare Sender Options for queue communication
-     *
-     * @param conn      The connection to use for communication
-     * @param channel   The channel to use for communication
-     * @param scheduler The scheduler to use for communication
-     * @return The built sender options
-     */
-    public static SenderOptions declareSenderOptions(Connection conn, Channel channel, Scheduler scheduler) {
-        return new SenderOptions()
-                .connectionMono(Mono.fromCallable(() -> conn))
-                .channelMono(Mono.fromCallable(() -> channel))
-                .resourceManagementScheduler(scheduler);
     }
 
     /**

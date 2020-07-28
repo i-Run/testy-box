@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.rabbitmq.ReceiverOptions;
@@ -27,10 +28,9 @@ import javax.inject.Named;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareAndBindQueues;
-import static fr.irun.testy.beat.messaging.AMQPHelper.declareReceiverOptions;
-import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
 import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
 
 /**
@@ -154,6 +154,10 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     @Nullable
     private final WithObjectMapper withObjectMapper;
 
+    // use thread-safe attributes to be able to inject the sender and receiver options at beforeAll level
+    private final AtomicReference<Connection> currentConnection = new AtomicReference<>();
+    private final AtomicReference<Channel> currentChannel = new AtomicReference<>();
+
     private WithRabbitMock(EmbeddedBroker embeddedBroker,
                            Map<String, String> queuesAndExchanges,
                            @Nullable WithObjectMapper withObjectMapper) {
@@ -168,8 +172,22 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
 
     @Override
-    public void beforeAll(ExtensionContext extensionContext) {
+    public void beforeAll(ExtensionContext context) {
         this.embeddedBroker.start();
+
+        final SenderOptions senderOptions = new SenderOptions()
+                .connectionMono(Mono.fromCallable(currentConnection::get))
+                .channelMono(Mono.fromCallable(currentChannel::get))
+                .resourceManagementScheduler(SCHEDULER);
+        final ReceiverOptions receiverOptions = new ReceiverOptions()
+                .connectionMono(Mono.fromCallable(currentConnection::get))
+                .connectionSubscriptionScheduler(SCHEDULER);
+
+        final Store store = getStore(context);
+
+        store.put(P_RABBIT_SENDER_OPT, senderOptions);
+        store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
+
     }
 
     @Override
@@ -179,7 +197,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
     @Override
     public void beforeEach(ExtensionContext context) throws IOException {
-        Store store = getStore(context);
+        final Store store = getStore(context);
 
         store.put(P_RABBIT_CONNECTION, embeddedBroker.newConnection());
 
@@ -194,13 +212,10 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
             final AMQPReceiver receiver = buildReceiverForQueue(channel, objectMapper, queue, exchange);
             store.put(P_RABBIT_AMQP_RECEIVER_PREFIX + queue, receiver);
         });
-
-        SenderOptions senderOptions = declareSenderOptions(conn, channel, SCHEDULER);
-        ReceiverOptions receiverOptions = declareReceiverOptions(conn, SCHEDULER);
-
         store.put(P_RABBIT_CHANNEL, channel);
-        store.put(P_RABBIT_SENDER_OPT, senderOptions);
-        store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
+
+        currentConnection.set(conn);
+        currentChannel.set(channel);
     }
 
     private AMQPReceiver buildReceiverForQueue(Channel channel, ObjectMapper objectMapper, String queue, String exchange) {
@@ -225,6 +240,8 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         if (connection.isOpen()) {
             connection.close();
         }
+        currentConnection.set(null);
+        currentChannel.set(null);
     }
 
     @Override
