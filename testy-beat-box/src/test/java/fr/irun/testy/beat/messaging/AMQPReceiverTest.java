@@ -67,7 +67,6 @@ class AMQPReceiverTest {
         final String actualResponse = AMQPHelper.emitWithReply(REQUEST_BODY, objectMapper, senderOptions, QUEUE_NAME, TIMEOUT)
                 .map(d -> readDeliveryValue(d, objectMapper, String.class))
                 .block();
-        assertThat(actualResponse).isNotNull();
         assertThat(actualResponse).isEqualTo(RESPONSE_BODY);
 
         final Optional<String> actualMessage = tested.getNextMessage()

@@ -1,6 +1,7 @@
 package fr.irun.testy.beat.brokers;
 
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 
 /**
  * Methods to be implemented by an embedded broker.
@@ -23,4 +24,11 @@ public interface EmbeddedBroker {
      * Stop the broker.
      */
     void stop();
+
+    /**
+     * Obtain the connection factory.
+     *
+     * @return Connection factory for the broker.
+     */
+    ConnectionFactory getConnectionFactory();
 }
