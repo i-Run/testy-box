@@ -7,6 +7,7 @@ import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import fr.irun.testy.core.extensions.ChainedExtension;
 import fr.irun.testy.core.extensions.WithObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,52 +42,59 @@ class WithRabbitMockTest {
             .append(WITH_RABBIT_MOCK)
             .register();
 
+    private static SenderOptions senderOptions;
+    private static ReceiverOptions receiverOptions;
+
     private ObjectMapper objectMapper;
+
+    @BeforeAll
+    static void beforeAll(SenderOptions senderOptions,
+                          ReceiverOptions receiverOptions) {
+        WithRabbitMockTest.senderOptions = senderOptions;
+        WithRabbitMockTest.receiverOptions = receiverOptions;
+    }
+
+    private Connection connection;
+    private Channel channel;
+    private AMQPReceiver receiverQueue1;
+    private AMQPReceiver receiverQueue2;
 
     @BeforeEach
     void setUp(Connection connection,
                Channel channel,
-               SenderOptions sender,
-               ReceiverOptions receiver,
-               @Named(QUEUE_1) AMQPReceiver receiver1,
-               @Named(QUEUE_2) AMQPReceiver receiver2,
+               @Named(QUEUE_1) AMQPReceiver receiverQueue1,
+               @Named(QUEUE_2) AMQPReceiver receiverQueue2,
                ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
 
-        assertThat(connection).isNotNull();
-        assertThat(connection.isOpen()).isTrue();
-
-        assertThat(channel).isNotNull();
-        assertThat(channel.isOpen()).isTrue();
-
-        assertThat(sender).isNotNull();
-        assertThat(receiver).isNotNull();
-        assertThat(receiver1).isNotNull();
-        assertThat(receiver1.queueName).isEqualTo(QUEUE_1);
-        assertThat(receiver2).isNotNull();
-        assertThat(receiver2.queueName).isEqualTo(QUEUE_2);
+        this.connection = connection;
+        this.channel = channel;
+        this.receiverQueue1 = receiverQueue1;
+        this.receiverQueue2 = receiverQueue2;
     }
 
     @Test
     void should_inject_connection(Connection tested) {
         assertThat(tested).isNotNull();
         assertThat(tested.isOpen()).isTrue();
+        assertThat(tested).isSameAs(connection);
     }
 
     @Test
     void should_inject_channel(Channel tested) {
         assertThat(tested).isNotNull();
         assertThat(tested.isOpen()).isTrue();
+        assertThat(tested).isSameAs(channel);
     }
 
     @Test
     void should_inject_sender(SenderOptions tested) {
-        assertThat(tested).isNotNull();
+        assertThat(tested).isSameAs(senderOptions);
     }
 
     @Test
     void should_inject_receiver(ReceiverOptions tested) {
-        assertThat(tested).isNotNull();
+        assertThat(tested).isSameAs(receiverOptions);
     }
 
     @Test
@@ -94,8 +102,10 @@ class WithRabbitMockTest {
                                       @Named(QUEUE_2) AMQPReceiver receiver2) {
         assertThat(receiver1).isNotNull();
         assertThat(receiver1.queueName).isEqualTo(QUEUE_1);
+        assertThat(receiver1).isSameAs(receiverQueue1);
         assertThat(receiver2).isNotNull();
         assertThat(receiver2.queueName).isEqualTo(QUEUE_2);
+        assertThat(receiver2).isSameAs(receiverQueue2);
     }
 
     @Test

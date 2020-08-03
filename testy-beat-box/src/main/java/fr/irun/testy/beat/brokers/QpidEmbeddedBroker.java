@@ -42,11 +42,12 @@ public final class QpidEmbeddedBroker implements EmbeddedBroker {
 
     /**
      * Create a customized broker.
+     *
      * @param configurationFile The path to the configuration file of the broker.
-     * @param host The host running the broker.
-     * @param port The port to access to a connection.
-     * @param username Username to get a connection.
-     * @param password Password to get a connection.
+     * @param host              The host running the broker.
+     * @param port              The port to access to a connection.
+     * @param username          Username to get a connection.
+     * @param password          Password to get a connection.
      */
     public QpidEmbeddedBroker(String configurationFile,
                               String host,
@@ -107,5 +108,10 @@ public final class QpidEmbeddedBroker implements EmbeddedBroker {
     @Override
     public void stop() {
         this.systemLauncher.shutdown();
+    }
+
+    @Override
+    public ConnectionFactory getConnectionFactory() {
+        return connectionFactory;
     }
 }

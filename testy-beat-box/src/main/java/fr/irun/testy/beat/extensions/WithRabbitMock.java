@@ -6,6 +6,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import fr.irun.testy.beat.brokers.EmbeddedBroker;
 import fr.irun.testy.beat.brokers.QpidEmbeddedBroker;
+import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -29,8 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static fr.irun.testy.beat.messaging.AMQPHelper.declareAndBindQueues;
-import static fr.irun.testy.beat.messaging.AMQPHelper.declareReceiverOptions;
-import static fr.irun.testy.beat.messaging.AMQPHelper.declareSenderOptions;
 import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
 
 /**
@@ -168,8 +167,21 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
 
     @Override
-    public void beforeAll(ExtensionContext extensionContext) {
+    public void beforeAll(ExtensionContext context) {
         this.embeddedBroker.start();
+
+        final SenderOptions senderOptions = new SenderOptions()
+                .connectionFactory(embeddedBroker.getConnectionFactory())
+                .resourceManagementScheduler(SCHEDULER);
+        final ReceiverOptions receiverOptions = new ReceiverOptions()
+                .connectionFactory(embeddedBroker.getConnectionFactory())
+                .connectionSubscriptionScheduler(SCHEDULER);
+
+        final Store store = getStore(context);
+
+        store.put(P_RABBIT_SENDER_OPT, senderOptions);
+        store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
+
     }
 
     @Override
@@ -179,7 +191,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
     @Override
     public void beforeEach(ExtensionContext context) throws IOException {
-        Store store = getStore(context);
+        final Store store = getStore(context);
 
         store.put(P_RABBIT_CONNECTION, embeddedBroker.newConnection());
 
@@ -190,17 +202,13 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
                 .map(wom -> wom.getObjectMapper(context))
                 .orElseGet(ObjectMapper::new);
 
+        AMQPHelper.declareReplyQueue(channel);
+
         queuesAndExchanges.forEach((queue, exchange) -> {
             final AMQPReceiver receiver = buildReceiverForQueue(channel, objectMapper, queue, exchange);
             store.put(P_RABBIT_AMQP_RECEIVER_PREFIX + queue, receiver);
         });
-
-        SenderOptions senderOptions = declareSenderOptions(conn, channel, SCHEDULER);
-        ReceiverOptions receiverOptions = declareReceiverOptions(conn, SCHEDULER);
-
         store.put(P_RABBIT_CHANNEL, channel);
-        store.put(P_RABBIT_SENDER_OPT, senderOptions);
-        store.put(P_RABBIT_RECEIVER_OPT, receiverOptions);
     }
 
     private AMQPReceiver buildReceiverForQueue(Channel channel, ObjectMapper objectMapper, String queue, String exchange) {
