@@ -15,8 +15,8 @@
 
 This project provides common extensions:
 
-* **WithObjectMapper** configures a [Jackson](https://github.com/FasterXML/jackson) mapper for Java to JSON conversion.
-* **ChainedExtension** registers other test extensions and initialize them in the order of the declaration.
+* [WithObjectMapper](https://rocket.i-run.si/javadoc/fr/irun/testy/core/extensions/WithObjectMapper.html) configures a [Jackson](https://github.com/FasterXML/jackson) mapper for Java to JSON conversion.
+* [ChainedExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/core/extensions/ChainedExtension.html) registers other test extensions and initialize them in the order of the declaration.
 
 ### WithObjectMapper
 
@@ -79,10 +79,10 @@ static ChainedExtension chain = ChainedExtension
 
 This project provides extensions to load an in-memory H2 database with schema and test data for SQL repositories.
 
-* **WithInMemoryDatasource** load a H2 SQL database in-memory on a named catalog.
-* **WithDatabaseLoaded** creates the database schema on the catalog using [Flyway](https://flywaydb.org).
-* **WithDslContext** creates JOOQ `DSLContext` from the input DataSource.
-* **WithSampleDataLoaded** reset the content of the tables before each test using JOOQ records.
+* [WithInMemoryDatasource](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithInMemoryDatasource.html) load a H2 SQL database in-memory on a named catalog.
+* [WithDatabaseLoaded](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithDatabaseLoaded.html) creates the database schema on the catalog using [Flyway](https://flywaydb.org).
+* [WithDslContext](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithDslContext.html) creates JOOQ `DSLContext` from the input DataSource.
+* [WithSampleDataLoaded](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithSampleDataLoaded.html) reset the content of the tables before each test using JOOQ records.
 
 ### WithInMemoryDatasource
 
