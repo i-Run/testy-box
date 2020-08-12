@@ -1,14 +1,14 @@
-# Testy-box
+# testy-box
 
 [[_TOC_]]
 
 ## Description
 
-`Testy-box` is a module providing many extensions for **JUnit 5** tests:
+`testy-box` is a module providing many extensions for **JUnit 5** tests:
 
 * **testy-core-box** provides core extensions. All the other projects depend on it.
 * **testy-jooq-box** provides extensions to run an in-memory H2 database. Test data can be inserted using [JOOQ](https://www.jooq.org/).
-* **testy-mongo-box** provides extensions to run an in-memory [MongoDb](https://www.mongodb.com/) database. Test data can be inserted.
+* **testy-mongo-box** provides extensions to run an in-memory [MongoDB](https://www.mongodb.com/) database. Test data can be inserted.
 * **testy-beat-box** provides extensions to run an in-memory [Qpid](https://qpid.apache.org/) AMQP broker and provide reactive RabbitMQ connections.
 
 ## testy-core-box
@@ -16,11 +16,11 @@
 This project provides common extensions:
 
 * [WithObjectMapper](https://rocket.i-run.si/javadoc/fr/irun/testy/core/extensions/WithObjectMapper.html) configures a [Jackson](https://github.com/FasterXML/jackson) mapper for Java to JSON conversion.
-* [ChainedExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/core/extensions/ChainedExtension.html) registers other test extensions and initialize them in the order of the declaration.
+* [ChainedExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/core/extensions/ChainedExtension.html) registers other test extensions and initializes them in the order of the declaration.
 
 ### WithObjectMapper
 
-This extension creates and store an `ObjectMapper` at step `BeforeAll`. This mapper can be injected as parameter in test, setUp and tearDown methods.
+This extension creates and stores an `ObjectMapper` at step `BeforeAll`. This mapper can be injected as parameter.
 
 ```java
 @RegisterExtension
@@ -28,20 +28,24 @@ static final WithObjectMapper wObjectMapper = WithObjectMapper
             .builder()
             .addMixin(MyModel.class, MyModelMixin.class)
             .addModule(new ParameterNamesModule())
-            .addModule(new GuavaModule())
             .addModule(new JavaTimeModule())
             .build();
+
+@BeforeAll
+static void beforeClass(ObjectMapper objectMapper) {
+    // (...)
+}
 ```
 
 ### ChainedExtension
 
-This extension registers other extensions and run them:
+This extension registers other extensions and runs them:
 
 * `BeforeEach` and `BeforeAll` callbacks are run in the order of the declaration.
 * `AfterEach` and `AfterAll` callbacks are run in the reverse order of the declaration.
 * `ParameterResolver` resolves a type with the first extension able to resolve it. If none can resolve a parameter, the parameter resolution will fail with standard JUnit exception.
 
-This extension is usefull to register test resources in order (for instance, register the DataSource before the database schema and the test data):
+This extension is usefull to register test resources in order (for instance, register the DataSource before the loaded):
 
 
 ```java
@@ -66,10 +70,10 @@ static final ChainedExtension chain = ChainedExtension
 ## testy-jooq-box
 
 This project is used to test SQL repositorites.
-It provides extensions to load an in-memory H2 database with schema and test data for SQL repositories.
+It provides extensions to load an in-memory H2 database, execute SQL scripts with [Flyway](https://flywaydb.org) and insert test data.
 
 * [WithInMemoryDatasource](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithInMemoryDatasource.html) loads a H2 SQL database in-memory on a named catalog.
-* [WithDatabaseLoaded](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithDatabaseLoaded.html) creates the database schema on the catalog using [Flyway](https://flywaydb.org).
+* [WithDatabaseLoaded](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithDatabaseLoaded.html) creates the database schema on the catalog using [Flyway](https://flywaydb.org) SQL scripts.
 * [WithDslContext](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithDslContext.html) creates JOOQ `DSLContext` from the input DataSource.
 * [WithSampleDataLoaded](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithSampleDataLoaded.html) reset the content of the tables before each test using JOOQ records.
 
@@ -100,7 +104,7 @@ void setUp(DataSource dataSource) {
 }
 ```
 
-If your test requires more than one data source, the parameters shall be annotated with `javax.inject.Named` to distinct them:
+If the test registers more than one data source, the parameters shall be annotated with `javax.inject.Named` to distinct them:
 
 ```java
 @RegisterExtension
@@ -124,11 +128,11 @@ void setUp(@Named("my_catalog_1") DataSource dataSource1,
 
 ### WithDatabaseLoaded
 
-This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and run a [Flyway](https://flywaydb.org/) migration on the related DB catalog.
+This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and runs a [Flyway](https://flywaydb.org/) migration on the related DB catalog.
 
-The SQL scripts to be run shall be located into `db.migration.<catalog>` in the classpath, where `<catalog>` is the name of DataSource catalog. The names of the SQL files shall match [Flyway naming convention](https://flywaydb.org/documentation/migrations#naming).
+The SQL scripts shall be located into `db.migration.<catalog>` in the classpath, where `<catalog>` is the name of DataSource catalog. The names of the SQL files shall match [Flyway naming convention](https://flywaydb.org/documentation/migrations#naming).
 
-The SQL scripts are run at `BeforeAll` step. They allow to create the database shema.
+The SQL scripts are run **before all the test methods**. They are expected to be used to create the database schema.
 
 ```java
 private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
@@ -151,7 +155,7 @@ static final ChainedExtension chain = ChainedExtension
 
 ### WithDslContext
 
-This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and create a [JOOQ DSLContext](https://www.jooq.org/doc/3.13/manual/sql-building/dsl-context/) on the related DataSource.
+This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and creates a [JOOQ DSLContext](https://www.jooq.org/doc/3.13/manual/sql-building/dsl-context/) on the related DataSource.
 
 ```java
     private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
@@ -191,7 +195,7 @@ void setUp(@Named("my_catalog_1") DSLContext dsl1,
 
 ### WithSampleDataLoaded
 
-This extension deletes and inserts test data before each test method.
+This extension deletes and inserts test data **before each test method**.
 
 The test data are inserted as JOOQ records. They can be defined with classes implementing [RelationalDataSet](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/model/RelationalDataSet.html)
 
@@ -199,7 +203,7 @@ The test data are inserted as JOOQ records. They can be defined with classes imp
 public final class MyElementDataSet implements RelationalDataSet<MyElementRecord> {
 
     @Override
-    public List<MyElementRecord> records() {
+    public List<MyElementRecord> records() {
         // Return all the records to insert in the table
     }
 }
@@ -268,7 +272,7 @@ void setUp(MongoClient mongoClient,
 
 ### WithMongoData
 
-This extension reset the content of the collections before each test method. The data of a collection can be defined by implementing [MongoDataSet](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/MongoDataSet.html).
+This extension resets the content of the collections before each test method. The data of a collection can be defined by implementing [MongoDataSet](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/MongoDataSet.html).
 
 ```java
 public class MyElementDataSet implements MongoDataSet<MyElement> {
@@ -347,7 +351,7 @@ static void beforeClass(SenderOptions senderOptions,
 }
 ```
 
-Before each test method, a RabbitMQ [Connection](https://www.rabbitmq.com/releases/rabbitmq-java-client/v1.4.0/rabbitmq-java-client-javadoc-1.4.0/com/rabbitmq/client/Connection.html) and a [Channel](https://www.rabbitmq.com/releases/rabbitmq-java-client/v1.4.0/rabbitmq-java-client-javadoc-1.4.0/com/rabbitmq/client/Channel.html) are opened. they can be injected as parameters.
+Before each test method, a RabbitMQ [Connection](https://www.rabbitmq.com/releases/rabbitmq-java-client/v1.4.0/rabbitmq-java-client-javadoc-1.4.0/com/rabbitmq/client/Connection.html) and a [Channel](https://www.rabbitmq.com/releases/rabbitmq-java-client/v1.4.0/rabbitmq-java-client-javadoc-1.4.0/com/rabbitmq/client/Channel.html) are opened. They can be injected as parameters.
 
 ```java
 @RegisterExtension
@@ -362,7 +366,7 @@ void setUp(Connection connection,
 }
 ```
 
-Queues and exchanges can also be created with the extension. When declaring a queue and an exchange, they are bound together with empty routing key.
+Queues and exchanges can also be created with the extension. When declaring a queue and an exchange, they are bound together with an empty routing key.
 
 ```java
 @RegisterExtension
@@ -372,7 +376,7 @@ static final WithRabbitMock withRabbitMock = WithRabbitMock
             .build();
 ```
 
-The queues are deleted automatically
+The queues are deleted automatically by closing the connection after each test method.
 
 If queues are declared, an [AMQPReceiver](https://rocket.i-run.si/javadoc/fr/irun/testy/beat/messaging/AMQPReceiver.html) can be injected as parameter for each queue.
 This receiver can consume messages on the declared queue and reply.
