@@ -57,7 +57,7 @@ private static final WithDatabaseLoaded wIrunDatabase = WithDatabaseLoaded
         .build();
 
 @RegisterExtension
-static ChainedExtension chain = ChainedExtension
+static final ChainedExtension chain = ChainedExtension
         .outer(wDataSource)
         .append(wIrunDatabase)
         .register();
@@ -149,7 +149,7 @@ private static final WithDatabaseLoaded wDatabaseLoaded = WithDatabaseLoaded
         .build();
 
 @RegisterExtension
-static ChainedExtension chain = ChainedExtension
+static final ChainedExtension chain = ChainedExtension
         .outer(wDataSource)
         .append(wDatabaseLoaded)
         .register();
@@ -160,17 +160,17 @@ static ChainedExtension chain = ChainedExtension
 This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and create a [JOOQ DSLContext](https://www.jooq.org/doc/3.13/manual/sql-building/dsl-context/) on the related DataSource.
 
 ```java
-    private static WithInMemoryDatasource wDataSource = WithInMemoryDatasource
+    private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
             .builder()
             .setCatalog("my_catalog")
             .build();
-    private static WithDslContext wDsl = WithDslContext
+    private static final WithDslContext wDsl = WithDslContext
             .builder()
             .setDatasourceExtension(wDataSource)
             .build();
 
     @RegisterExtension
-    static ChainedExtension chain = ChainedExtension
+    static final ChainedExtension chain = ChainedExtension
             .outer(wDataSource)
             .append(wDsl)
             .register();
@@ -233,7 +233,7 @@ private static final WithSampleDataLoaded wSamples = WithSampleDataLoaded
         .build();
 
 @RegisterExtension
-static ChainedExtension chain = ChainedExtension
+static final ChainedExtension chain = ChainedExtension
         .outer(wDataSource)
         .append(wDatabaseLoaded)
         .append(wDSLContext)
@@ -241,5 +241,90 @@ static ChainedExtension chain = ChainedExtension
         .register();
 ```
 
-:fire: Only the tables related to the data sets are emptied before each test. If a test fills a table not related to any data set, this table shall be emptied manually.
+:fire: Only the tables related to the data sets are emptied before each test. If a test inserts rows into another table, this table shall be emptied manually. :fire:
+
+## testy-mongo-box
+
+This project provides extensions to load a MongoDB database in memory:
+
+* [WithEmbeddedMongo](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/WithEmbeddedMongo.html) runs the database in memory.
+* [WithMongoData](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/WithMongoData.html) inserts test data into the database.
+
+### WithEmbeddedMongo
+
+This extension starts MongoDB in memory.
+
+```java
+@RegisterExtension
+static final WithEmbeddedMongo wMongo = WithEmbeddedMongo
+        .builder()
+        .setDatabaseName("my_database")
+        .build();
+```
+
+With this extension, reactive `MongoClient` and `ReactiveMongoDatabaseFactory` can be injected as parameters.
+
+```java
+@BeforeEach
+void setUp(MongoClient mongoClient, 
+           ReactiveMongoDatabaseFactory factory) {
+    // (...)
+}
+```
+
+### WithMongoData
+
+This extension reset the content of the collections before each test method. The data of a collection can be defined by implementing [MongoDataSet](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/MongoDataSet.html).
+
+```java
+public class MyElementDataSet implements MongoDataSet<MyElement> {
+
+    @Override
+    public List<MyElement> documents() {
+        // List the objects to be inserted in the collection
+    }
+}
+```
+
+Each data set can be associated with a specific collection with the extension.
+
+```java
+private static final WithEmbeddedMongo wMongo = WithEmbeddedMongo
+        .builder()
+        .build();
+private static final WithMongoData wMongoData = WithMongoData
+        .builder(wMongo)
+        .addDataset("my_element_collection", new MyElementDataSet())
+        .build();
+
+@RegisterExtension
+static final ChainedExtension wExtensions = ChainedExtension
+        .outer(wMongo)
+        .append(wMongoData)
+        .register();
+```
+
+Optionally, a specific mapper can be used to convert objects to Mongo Documents by including the extension [WithObjectMapper](https://rocket.i-run.si/javadoc/fr/irun/testy/core/extensions/WithObjectMapper.html).
+
+```java
+private static final WithEmbeddedMongo wMongo = WithEmbeddedMongo
+        .builder()
+        .build();
+private static final WithObjectMapper wObjectMapper = WithObjectMapper
+        .builder()
+        .addModule(new JavaTimeModule())
+        .build();
+private static final WithMongoData wMongoData = WithMongoData
+        .builder(wMongo)
+        .withObjectMapper(wObjectMapper)
+        .addDataset("my_element_collection", new MyElementDataSet())
+        .build();
+
+@RegisterExtension
+static final ChainedExtension wExtensions = ChainedExtension
+        .outer(wMongo)
+        .append(wObjectMapper)
+        .append(wMongoData)
+        .register();
+```
 
