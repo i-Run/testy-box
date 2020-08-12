@@ -1,23 +1,22 @@
----
-title: Testy-Box
-toc: true
----
+# Testy-box
+
+[[_TOC_]]
 
 ## Description
 
-Testy-box is a module providing many extensions for JUnit 5 tests:
+`Testy-box` is a module providing many extensions for **JUnit 5** tests:
 
-* **testy-core-box**: provides core extensions. All the other projects depend on it.
-* **testy-jooq-box**: provides extensions to run an in-memory H2 database. Test data can be inserted using [JOOQ](https://www.jooq.org/).
-* **testy-mongo-box**: provides extensions to run an in-memory [MongoDb](https://www.mongodb.com/) database. Test data can be inserted.
-* **testy-beat-box**: provides extensions to run an in-memory [Qpid](https://qpid.apache.org/) AMQP broker and provide reactive RabbitMQ connections.
+* **testy-core-box** provides core extensions. All the other projects depend on it.
+* **testy-jooq-box** provides extensions to run an in-memory H2 database. Test data can be inserted using [JOOQ](https://www.jooq.org/).
+* **testy-mongo-box** provides extensions to run an in-memory [MongoDb](https://www.mongodb.com/) database. Test data can be inserted.
+* **testy-beat-box** provides extensions to run an in-memory [Qpid](https://qpid.apache.org/) AMQP broker and provide reactive RabbitMQ connections.
 
 ## testy-core-box
 
 This project provides common extensions:
 
-* **WithObjectMapper**: configure a [Jackson](https://github.com/FasterXML/jackson) mapper for Java to JSON conversion.
-* **ChainedExtension**: register other test extensions and initialize them in the order of the declaration.
+* **WithObjectMapper** configures a [Jackson](https://github.com/FasterXML/jackson) mapper for Java to JSON conversion.
+* **ChainedExtension** registers other test extensions and initialize them in the order of the declaration.
 
 ### WithObjectMapper
 
