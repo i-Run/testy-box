@@ -114,16 +114,9 @@ static final WithInMemoryDatasource wDataSource2 = WithInMemoryDatasource
             .setCatalog("my_catalog_2")
             .build();
 
-
-@BeforeAll
-static void beforeClass(@Named("my_catalog_1")
-                        DataSource dataSource1) {
-    // (...)
-}
-
 @BeforeEach
-void setUp(@Named("my_catalog_2") 
-           DataSource dataSource2) {
+void setUp(@Named("my_catalog_1") DataSource dataSource1, 
+           @Named("my_catalog_2") DataSource dataSource2) {
     // (...)
 }
 ```
@@ -134,7 +127,7 @@ This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javado
 
 The SQL scripts to be run shall be located into `db.migration.<catalog>` in the classpath, where `<catalog>` is the name of DataSource catalog. The names of the SQL files shall match [Flyway naming convention](https://flywaydb.org/documentation/migrations#naming).
 
-The SQL scripts are run at `BeforeAll` step. They allow to create your database shema.
+The SQL scripts are run at `BeforeAll` step. They allow to create the database shema.
 
 ```java
 private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
@@ -142,7 +135,7 @@ private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
         .setCatalog("my_catalog")
         .build();
 
-// SQL files shall be in classpath:db.migration.my_catalog
+// SQL files shall be located in classpath:db.migration.my_catalog
 private static final WithDatabaseLoaded wDatabaseLoaded = WithDatabaseLoaded
         .builder()
         .setDatasourceExtension(wDataSource)
