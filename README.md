@@ -65,9 +65,10 @@ static final ChainedExtension chain = ChainedExtension
 
 ## testy-jooq-box
 
-This project provides extensions to load an in-memory H2 database with schema and test data for SQL repositories.
+This project is used to test SQL repositorites.
+It provides extensions to load an in-memory H2 database with schema and test data for SQL repositories.
 
-* [WithInMemoryDatasource](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithInMemoryDatasource.html) load a H2 SQL database in-memory on a named catalog.
+* [WithInMemoryDatasource](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithInMemoryDatasource.html) loads a H2 SQL database in-memory on a named catalog.
 * [WithDatabaseLoaded](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithDatabaseLoaded.html) creates the database schema on the catalog using [Flyway](https://flywaydb.org).
 * [WithDslContext](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithDslContext.html) creates JOOQ `DSLContext` from the input DataSource.
 * [WithSampleDataLoaded](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/WithSampleDataLoaded.html) reset the content of the tables before each test using JOOQ records.
@@ -238,7 +239,7 @@ static final ChainedExtension chain = ChainedExtension
 
 ## testy-mongo-box
 
-This project provides extensions to load a MongoDB database in memory:
+This project is used to test MongoDB repositories. It provides extensions to load a Mongo database in memory:
 
 * [WithEmbeddedMongo](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/WithEmbeddedMongo.html) runs the database in memory.
 * [WithMongoData](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/WithMongoData.html) inserts test data into the database.
@@ -321,3 +322,91 @@ static final ChainedExtension wExtensions = ChainedExtension
         .register();
 ```
 
+## testy-beat-box
+
+This project is used to test classes using RabbitMQ. It provides an extension to run an embedded AMQP broker.
+
+* [WithRabbitMock](https://rocket.i-run.si/javadoc/fr/irun/testy/beat/extensions/WithRabbitMock.html) runs an embedded AMQP broker.
+
+### WithRabbitMock
+
+This extension runs an embedded AMQP broker ([Qpid](https://qpid.apache.org/) by default).
+
+When registered, the Rabbit [SenderOptions](https://projectreactor.io/docs/rabbitmq/snapshot/api/reactor/rabbitmq/SenderOptions.html) and [ReceiverOptions](https://projectreactor.io/docs/rabbitmq/milestone/api/reactor/rabbitmq/ReceiverOptions.html) can be injected as parameters.
+
+```java
+@RegisterExtension
+static final WithRabbitMock withRabbitMock = WithRabbitMock
+            .builder()
+            .build();
+
+@BeforeAll
+static void beforeClass(SenderOptions senderOptions,
+                        ReceiverOptions receiverOptions) {
+    // (...)
+}
+```
+
+Before each test method, a RabbitMQ [Connection](https://www.rabbitmq.com/releases/rabbitmq-java-client/v1.4.0/rabbitmq-java-client-javadoc-1.4.0/com/rabbitmq/client/Connection.html) and a [Channel](https://www.rabbitmq.com/releases/rabbitmq-java-client/v1.4.0/rabbitmq-java-client-javadoc-1.4.0/com/rabbitmq/client/Channel.html) are opened. they can be injected as parameters.
+
+```java
+@RegisterExtension
+static final WithRabbitMock withRabbitMock = WithRabbitMock
+            .builder()
+            .build();
+
+@BeforeEach
+void setUp(Connection connection,
+           Channel channel) {
+    // (...)
+}
+```
+
+Queues and exchanges can also be created with the extension. When declaring a queue and an exchange, they are bound together with empty routing key.
+
+```java
+@RegisterExtension
+static final WithRabbitMock withRabbitMock = WithRabbitMock
+            .builder()
+            .declareQueueAndExchange("my_queue", "my_exchange")
+            .build();
+```
+
+The queues are deleted automatically
+
+If queues are declared, an [AMQPReceiver](https://rocket.i-run.si/javadoc/fr/irun/testy/beat/messaging/AMQPReceiver.html) can be injected as parameter for each queue.
+This receiver can consume messages on the declared queue and reply.
+
+```java
+@RegisterExtension
+static final WithRabbitMock withRabbitMock = WithRabbitMock
+            .builder()
+            .declareQueueAndExchange("my_queue", "my_exchange")
+            .build();
+
+@Test
+void myTest(AMQPReceiver receiver) {
+    receiver.consumeAndReply("my-mocked-response");
+
+    // (...)
+
+    final Stream<Delivery> messagesOnQueue = receiver.getMessages();
+}
+```
+
+If many queues are declared in the extension, the parameter shall be annotated with `javax.inject.Named`.
+
+```java
+@RegisterExtension
+static final WithRabbitMock withRabbitMock = WithRabbitMock
+            .builder()
+            .declareQueueAndExchange("my_queue_1", "my_exchange_1")
+            .declareQueueAndExchange("my_queue_2", "my_exchange_2")
+            .build();
+
+@Test
+void myTest(@Named("my_queue_1") AMQPReceiver receiver1,
+            @Named("my_queue_2") AMQPReceiver receiver2) {
+    // (...)
+}
+```
