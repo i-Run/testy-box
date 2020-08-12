@@ -56,22 +56,10 @@ private static final WithDatabaseLoaded wIrunDatabase = WithDatabaseLoaded
         .setDatasourceExtension(wDataSource)
         .build();
 
-private static final WithDslContext wDSLContext = WithDslContext
-        .builder()
-        .setDatasourceExtension(wDataSource)
-        .build();
-
-private static final WithSampleDataLoaded wSamples = WithSampleDataLoaded
-        .builder(wDSLContext)
-        .addDataset(new MyCustomDataSet())
-        .build();
-
 @RegisterExtension
 static ChainedExtension chain = ChainedExtension
         .outer(wDataSource)
         .append(wIrunDatabase)
-        .append(wDSLContext)
-        .append(wSamples)
         .register();
 ```
 
@@ -115,13 +103,13 @@ If your test requires more than one data source, the parameters shall be annotat
 
 ```java
 @RegisterExtension
-static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
+static final WithInMemoryDatasource wDataSource1 = WithInMemoryDatasource
             .builder()
             .setCatalog("my_catalog_1")
             .build();
 
 @RegisterExtension
-static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
+static final WithInMemoryDatasource wDataSource2 = WithInMemoryDatasource
             .builder()
             .setCatalog("my_catalog_2")
             .build();
@@ -139,3 +127,119 @@ void setUp(@Named("my_catalog_2")
     // (...)
 }
 ```
+
+### WithDatabaseLoaded
+
+This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and run a [Flyway](https://flywaydb.org/) migration on the related DB catalog.
+
+The SQL scripts to be run shall be located into `db.migration.<catalog>` in the classpath, where `<catalog>` is the name of DataSource catalog. The names of the SQL files shall match [Flyway naming convention](https://flywaydb.org/documentation/migrations#naming).
+
+The SQL scripts are run at `BeforeAll` step. They allow to create your database shema.
+
+```java
+private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
+        .builder()
+        .setCatalog("my_catalog")
+        .build();
+
+// SQL files shall be in classpath:db.migration.my_catalog
+private static final WithDatabaseLoaded wDatabaseLoaded = WithDatabaseLoaded
+        .builder()
+        .setDatasourceExtension(wDataSource)
+        .build();
+
+@RegisterExtension
+static ChainedExtension chain = ChainedExtension
+        .outer(wDataSource)
+        .append(wDatabaseLoaded)
+        .register();
+```
+
+### WithDslContext
+
+This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and create a [JOOQ DSLContext](https://www.jooq.org/doc/3.13/manual/sql-building/dsl-context/) on the related DataSource.
+
+```java
+    private static WithInMemoryDatasource wDataSource = WithInMemoryDatasource
+            .builder()
+            .setCatalog("my_catalog")
+            .build();
+    private static WithDslContext wDsl = WithDslContext
+            .builder()
+            .setDatasourceExtension(wDataSource)
+            .build();
+
+    @RegisterExtension
+    static ChainedExtension chain = ChainedExtension
+            .outer(wDataSource)
+            .append(wDsl)
+            .register();
+```
+
+This DSL can be injected as parameter.
+
+```java
+@BeforeEach
+void setUp(DSLContext dsl) {
+    // (...)
+}
+```
+
+If many catalogs are registered, the parameter shall be annotated with `javax.inject.Named`:
+
+```java
+@BeforeEach
+void setUp(@Named("my_catalog_1") DSLContext dsl1, 
+           @Named("my_catalog_2") DSLContext dsl2) {
+    // (...)
+}
+```
+
+### WithSampleDataLoaded
+
+This extension deletes and inserts test data before each test method.
+
+The test data are inserted as JOOQ records. They can be defined with classes implementing [RelationalDataSet](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/model/RelationalDataSet.html)
+
+```java
+public final class MyElementDataSet implements RelationalDataSet<MyElementRecord> {
+
+    @Override
+    public List<MyElementRecord> records() {
+        // Return all the records to insert in the table
+    }
+}
+```
+
+These data set can be added to the extension `WithSampleDataLoaded` to setup the test data
+
+```java
+private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
+        .builder()
+        .setCatalog("my_catalog")
+        .build();
+private static final WithDatabaseLoaded wDatabaseLoaded = WithDatabaseLoaded
+        .builder()
+        .setDatasourceExtension(wDataSource)
+        .build();
+private static final WithDslContext wDSLContext = WithDslContext
+        .builder()
+        .setDatasourceExtension(wDataSource)
+        .build();
+
+private static final WithSampleDataLoaded wSamples = WithSampleDataLoaded
+        .builder(wDSLContext)
+        .addDataset(new MyElementDataSet())
+        .build();
+
+@RegisterExtension
+static ChainedExtension chain = ChainedExtension
+        .outer(wDataSource)
+        .append(wDatabaseLoaded)
+        .append(wDSLContext)
+        .append(wSamples)
+        .register();
+```
+
+:fire: Only the tables related to the data sets are emptied before each test. If a test fills a table not related to any data set, this table shall be emptied manually.
+
