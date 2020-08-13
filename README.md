@@ -45,7 +45,7 @@ This extension registers other extensions and runs them:
 * `AfterEach` and `AfterAll` callbacks are run in the reverse order of the declaration.
 * `ParameterResolver` resolves a type with the first extension able to resolve it. If none can resolve a parameter, the parameter resolution will fail with standard JUnit exception.
 
-This extension is usefull to register test resources in order (for instance, register the DataSource before the loaded):
+This extension is usefull to register test resources in order (for instance, register the DataSource before loading the database schema):
 
 
 ```java
