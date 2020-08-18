@@ -2,16 +2,11 @@ package fr.irun.testy.mongo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.mongodb.BasicDBObject;
-import com.mongodb.client.result.DeleteResult;
-import com.mongodb.reactivestreams.client.MongoDatabase;
-import com.mongodb.reactivestreams.client.Success;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.bson.Document;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.reactivestreams.Publisher;
-import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
@@ -109,30 +104,23 @@ public final class WithMongoData implements BeforeEachCallback {
 
     @Override
     public void beforeEach(ExtensionContext context) {
-        final ReactiveMongoDatabaseFactory reactiveFactory = this.wEmbeddedMongo.getMongoFactory(context);
         final ObjectMapper objectMapper = Optional.ofNullable(this.wObjectMapper)
                 .map(wom -> wom.getObjectMapper(context))
                 .orElseGet(ObjectMapper::new);
-        final MongoDatabase mongoDb = reactiveFactory.getMongoDatabase();
+        final ReactiveMongoTemplate mongoTemplate = this.wEmbeddedMongo.getMongoTemplate(context);
 
         dataSets.forEach((collection, dataSet) -> {
-            cleanCollection(mongoDb, collection);
-            fillCollection(mongoDb, objectMapper, collection, dataSet);
+            mongoTemplate.dropCollection(collection).block();
+            fillCollection(mongoTemplate, objectMapper, collection, dataSet);
         });
     }
 
-    private void cleanCollection(MongoDatabase mongoDb, String collectionName) {
-        final Publisher<DeleteResult> publisher = mongoDb.getCollection(collectionName).deleteMany(new BasicDBObject());
-        Mono.from(publisher).block();
-    }
-
-    private void fillCollection(MongoDatabase mongoDb, ObjectMapper objectMapper, String collectionName, MongoDataSet<?> dataSet) {
+    private void fillCollection(ReactiveMongoTemplate mongoDb, ObjectMapper objectMapper, String collectionName, MongoDataSet<?> dataSet) {
         final List<Document> toInsert = dataSet.documents().stream()
                 .map(o -> objectMapper.convertValue(o, Document.class))
                 .collect(Collectors.toList());
 
-        final Publisher<Success> publisher = mongoDb.getCollection(collectionName).insertMany(toInsert);
-        Mono.from(publisher).block();
+        mongoDb.insertAll(Mono.just(toInsert), collectionName).blockLast();
     }
 
     /**
