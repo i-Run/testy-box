@@ -104,12 +104,11 @@ function getParentValue() {
   local value="$1"
   local getParentValue
   getParentValue=$(xml2 < pom.xml | grep -e "/parent/${value}" | sed 's/.*=//')
-  debug "getParentValue: ${getParentValue}"
   echo "${getParentValue}"
 }
 
 function get_git_current_branch() {
-  current_branch=$(git branch --show-current | sed -r "s/(.*\/[0-9]*-)//")
+  current_branch=$(echo "$1" | sed -r "s/(.*\/[0-9]*-)//")
   debug "current branch: ${current_branch}"
   echo "${current_branch}"
 }
@@ -118,17 +117,18 @@ function donwload_gitlab_file() {
   local project_id="$1"
   local file="$2"
   local ref_branch
-  ref_branch=$(display_gitlab_project_branche "${project_id}"|grep -e ".*\/[0-9]*-$(get_git_current_branch)" ||true)
+  ref_branch=$(display_gitlab_project_branche "${project_id}"|grep -e ".*\/[0-9]*-$(get_git_current_branch "${commit_ref_name}")" ||true)
   download_gitlab_file=$(get_gitlab_json "https://${GITLAB_DOMAIN}/api/v4/projects/${project_id}/repository/files/${file}/raw?ref=${ref_branch}")
+  debug "donwload_gitlab_file: echo ${download_gitlab_file}"
   echo "${download_gitlab_file}" > "${project_id}_${file}"
 }
 
 function checkIfCurrentBranchExist() {
   local project_id="$1"
   local checkIfCurrentBranchExist
-  checkIfCurrentBranchExist=$(display_gitlab_project_branche "${project_id}"|grep -e ".*\/[0-9]*-$(get_git_current_branch)" ||true)
+  checkIfCurrentBranchExist=$(display_gitlab_project_branche "${project_id}"|grep -e ".*\/[0-9]*-$(get_git_current_branch "${commit_ref_name}")" ||true)
   debug "checkIfCurrentBranchExist: ${checkIfCurrentBranchExist}"
-  if [ -z "${checkIfCurrentBranchExist:-}" ];then 
+  if [ -z "${checkIfCurrentBranchExist:-}" ];then
     echo 'false' 
     debug "result: don't match"
   else 
@@ -142,7 +142,8 @@ function installParent() {
   local target_file="$2"
   if [[ $(checkIfCurrentBranchExist "${project_id}") = "true" ]]; then
     donwload_gitlab_file "${project_id}" "${target_file}"
-    mvn install -f "${project_id}_${target_file}"
+    debug "mvn clean install -f ${project_id}_${target_file}"
+    mvn "${MVN_ARGS[@]}" clean install -f "${project_id}_${target_file}"
   fi
 }
 
@@ -286,7 +287,12 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
             usage
             ;;
             -v|--verbose)
-                declare -r verbose=true
+            declare -r verbose=true
+            shift
+            ;;
+            -c|--commit_ref_name)
+            commit_ref_name=$2
+            shift
             shift
             ;;
             *)    # unknown option
@@ -297,6 +303,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
     done
     set -- "${POSITIONAL[@]}" # restore positional parameters
     readonly PARENT_VERSION=$(getParentValue "version")
+    debug "PARENT_VERSION: ${PARENT_VERSION}"
     if [[ "${PARENT_VERSION}" =~ -SNAPSHOT ]]; then
       readonly PARENT_ARTIFACT_ID=$(getParentValue "artifactId")
       readonly PROJECT_ID=$(get_project_id "${PARENT_ARTIFACT_ID}")
