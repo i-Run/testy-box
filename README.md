@@ -243,9 +243,9 @@ static final ChainedExtension chain = ChainedExtension
 
 ## testy-mongo-box
 
-This project is used to test MongoDB repositories. It provides extensions to load a Mongo database in memory:
+This project is used to test MongoDB repositories. It provides extensions to use an embedded Mongo database:
 
-* [WithEmbeddedMongo](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/WithEmbeddedMongo.html) runs the database in memory.
+* [WithEmbeddedMongo](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/WithEmbeddedMongo.html) initializes the embbeded Mongo database.
 * [WithMongoData](https://rocket.i-run.si/javadoc/fr/irun/testy/mongo/WithMongoData.html) inserts test data into the database.
 
 ### WithEmbeddedMongo
