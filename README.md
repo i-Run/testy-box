@@ -250,7 +250,7 @@ This project is used to test MongoDB repositories. It provides extensions to loa
 
 ### WithEmbeddedMongo
 
-This extension starts MongoDB in memory.
+This extension starts an embedded MongoDB.
 
 ```java
 @RegisterExtension
@@ -260,12 +260,13 @@ static final WithEmbeddedMongo wMongo = WithEmbeddedMongo
         .build();
 ```
 
-With this extension, reactive `MongoClient` and `ReactiveMongoDatabaseFactory` can be injected as parameters.
+With this extension, `MongoClient`, `ReactiveMongoDatabaseFactory` and `ReactiveMongoTemplate` can be injected as parameters.
 
 ```java
 @BeforeEach
 void setUp(MongoClient mongoClient, 
-           ReactiveMongoDatabaseFactory factory) {
+           ReactiveMongoDatabaseFactory factory,
+           ReactiveMongoTemplate mongoTemplate) {
     // (...)
 }
 ```

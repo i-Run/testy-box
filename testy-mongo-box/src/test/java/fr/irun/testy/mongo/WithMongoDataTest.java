@@ -1,7 +1,6 @@
 package fr.irun.testy.mongo;
 
 
-import com.mongodb.reactivestreams.client.MongoDatabase;
 import fr.irun.testy.core.extensions.ChainedExtension;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import fr.irun.testy.mongo.sample.DocumentDataSet;
@@ -10,8 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
-import reactor.core.publisher.Flux;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 
 import java.util.List;
 
@@ -39,11 +37,11 @@ class WithMongoDataTest {
             .append(WITH_MONGO_DATA)
             .register();
 
-    private MongoDatabase mongoDatabase;
+    private ReactiveMongoTemplate mongoTemplate;
 
     @BeforeEach
-    void setUp(ReactiveMongoDatabaseFactory mongoFactory) {
-        this.mongoDatabase = mongoFactory.getMongoDatabase();
+    void setUp(ReactiveMongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
     }
 
     @ParameterizedTest
@@ -52,7 +50,7 @@ class WithMongoDataTest {
             COLLECTION_1,
     })
     void should_have_inserted_data(String collectionName) {
-        final List<Document> actual = Flux.from(mongoDatabase.getCollection(collectionName).find())
+        final List<Document> actual = mongoTemplate.findAll(Document.class, collectionName)
                 .collectList()
                 .block();
 

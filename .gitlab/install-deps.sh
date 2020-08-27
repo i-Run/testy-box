@@ -57,8 +57,95 @@ function cleanup() {
 readonly VERSION_SEPARATOR="\\u02DF"
 readonly IRUN_GROUP_ID="fr.irun"
 readonly IRUN_PATTERN="(fr.irun:.*)"
+readonly GITLAB_DOMAIN="gitlab.i-run.fr"
+readonly PRIVATE_TOKEN="${BRIGIT_ACCESS_TOKEN}"
+
 declare -a MVN_ARGS; IFS=' ' read -r -a MVN_ARGS <<< "${MAVEN_CLI_OPTS:-""}"
 
+#Get JSON from gitlab api
+#Param URI: the URI to fetch
+#Returns the JSON-formatted response
+function get_gitlab_json() {
+    uri=$1
+    curl -s --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" "$uri" || return 1
+}
+
+# Get the project ID for a given project name
+#
+# Param name    the name of the project
+# Returns       the project's ID
+function get_project_id() {
+    local name; name="$1"
+    debug "https://${GITLAB_DOMAIN}/api/v4/search?scope=projects&search=${name}"
+    get_gitlab_json_field "https://${GITLAB_DOMAIN}/api/v4/search?scope=projects&search=${name}" '.[0].id'
+}
+
+#Get one or more JSON field for a single entity from gitlab api
+#Param URI:   the URI to fetch
+#Param Field: the field (or comma-separated fields) to fetch
+#Returns the requested field(s), raw. In case of multiple fields,
+#they're returned in the requested order, separated by newlines
+function get_gitlab_json_field() {
+    uri=$1
+    field=$2
+
+    get_gitlab_json "$uri"  | jq -r "$field"
+}
+
+function display_gitlab_project_branche() {
+  local project_id="$1"
+  local display_gitlab_project_branche
+  display_gitlab_project_branche=$(get_gitlab_json_field "https://${GITLAB_DOMAIN}/api/v4/projects/${project_id}/repository/branches" ".[].name")
+  debug "display_gitlab_project_branche: ${display_gitlab_project_branche[*]}"
+  echo "${display_gitlab_project_branche[*]}"
+}
+
+function getParentValue() {
+  local value="$1"
+  local getParentValue
+  getParentValue=$(xml2 < pom.xml | grep -e "/parent/${value}" | sed 's/.*=//')
+  echo "${getParentValue}"
+}
+
+function get_git_current_branch() {
+  current_branch=$(echo "$1" | sed -r "s/(.*\/[0-9]*-)//")
+  debug "current branch: ${current_branch}"
+  echo "${current_branch}"
+}
+
+function donwload_gitlab_file() {
+  local project_id="$1"
+  local file="$2"
+  local ref_branch
+  ref_branch=$(display_gitlab_project_branche "${project_id}"|grep -e ".*\/[0-9]*-$(get_git_current_branch "${commit_ref_name}")" ||true)
+  download_gitlab_file=$(get_gitlab_json "https://${GITLAB_DOMAIN}/api/v4/projects/${project_id}/repository/files/${file}/raw?ref=${ref_branch}")
+  debug "donwload_gitlab_file: echo ${download_gitlab_file}"
+  echo "${download_gitlab_file}" > "${project_id}_${file}"
+}
+
+function checkIfCurrentBranchExist() {
+  local project_id="$1"
+  local checkIfCurrentBranchExist
+  checkIfCurrentBranchExist=$(display_gitlab_project_branche "${project_id}"|grep -e ".*\/[0-9]*-$(get_git_current_branch "${commit_ref_name}")" ||true)
+  debug "checkIfCurrentBranchExist: ${checkIfCurrentBranchExist}"
+  if [ -z "${checkIfCurrentBranchExist:-}" ];then
+    echo 'false' 
+    debug "result: don't match"
+  else 
+    echo 'true'
+    debug "result: match"
+  fi
+}
+
+function installParent() {
+  local project_id="$1"
+  local target_file="$2"
+  if [[ $(checkIfCurrentBranchExist "${project_id}") = "true" ]]; then
+    donwload_gitlab_file "${project_id}" "${target_file}"
+    debug "mvn clean install -f ${project_id}_${target_file}"
+    mvn "${MVN_ARGS[@]}" clean install -f "${project_id}_${target_file}"
+  fi
+}
 
 function getDependencies() {
     local -r prefix="$1"
@@ -178,7 +265,8 @@ function installDependencies() {
 
     IFS=$'\n' repositories=( "$(sort -u <<<"${repositories[*]}")" )
         
-    debug "repo: \\n${repositories[*]}"
+    debug "repo:
+${repositories[*]}"
     for r in ${repositories[*]}; do
         local -a rr; IFS=' ' read -r -a rr <<< "$r"
         installDependency "${rr[@]}"
@@ -199,7 +287,12 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
             usage
             ;;
             -v|--verbose)
-                declare -r verbose=true
+            declare -r verbose=true
+            shift
+            ;;
+            -c|--commit_ref_name)
+            commit_ref_name=$2
+            shift
             shift
             ;;
             *)    # unknown option
@@ -209,6 +302,15 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
         esac
     done
     set -- "${POSITIONAL[@]}" # restore positional parameters
+    readonly PARENT_VERSION=$(getParentValue "version")
+    debug "PARENT_VERSION: ${PARENT_VERSION}"
+    if [[ "${PARENT_VERSION}" =~ -SNAPSHOT ]]; then
+      readonly PARENT_ARTIFACT_ID=$(getParentValue "artifactId")
+      readonly PROJECT_ID=$(get_project_id "${PARENT_ARTIFACT_ID}")
+      debug "PROJECT_ID: ${PROJECT_ID}"
+      installParent "${PROJECT_ID}" "pom.xml"
+    fi
+
     declare -a CURRENT_ARTIFACT_ID
     #shellcheck disable=SC2016
     readonly CURRENT_ARTIFACT_ID=("$(mvn exec:exec -q -Dexec.executable=echo -Dexec.args='${project.artifactId}')")

@@ -1,5 +1,5 @@
 ---
-image: d.i-run.fr/irun-compiler:jdk8-20200224.18830594
+image: d.i-run.fr/irun-compiler:jdk8-20200819.dfdc7d46
 
 variables:
   # CHAT_WEBHOOK_URL: Must exists in group variables or projet variables
@@ -39,7 +39,7 @@ maven:build:
   stage: build
   before_script:
     - find "${CI_PROJECT_DIR}/.m2/repository" -type f -name "*SNAPSHOT*" -delete || true
-    - .gitlab/install-deps.sh
+    - .gitlab/install-deps.sh -c $CI_COMMIT_REF_NAME
   script:
     - mvn ${MAVEN_CLI_OPTS} clean install -DskipTests
   artifacts:
