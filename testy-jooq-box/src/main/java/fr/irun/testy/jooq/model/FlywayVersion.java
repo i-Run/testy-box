@@ -13,13 +13,48 @@ import java.time.Instant;
 @Value
 public class FlywayVersion {
 
+    /**
+     * Version of the executed migration.
+     */
     public final String version;
+
+    /**
+     * Description of the executed migration.
+     */
     public final String description;
+
+    /**
+     * Type of the executed migration.
+     */
     public final MigrationType type;
+
+    /**
+     * Script name for the executed migration.
+     */
     public final String script;
+
+    /**
+     * Unique checksum of the executed migration.
+     */
     public final Integer checksum;
+
+    /**
+     * Author of the executed migration.
+     */
     public final String installedBy;
+
+    /**
+     * Date when the migration has been executed.
+     */
     public final Instant installedOn;
+
+    /**
+     * Time spent by the migration execution in millis.
+     */
     public final Integer executionTime;
+
+    /**
+     * Flag indicating if the migration has been successfully executed.
+     */
     public final Boolean success;
 }

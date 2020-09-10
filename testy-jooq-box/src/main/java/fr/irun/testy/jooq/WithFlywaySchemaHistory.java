@@ -28,7 +28,56 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Test extension to fill a flyway history.
+ * Extension used to initialize a Flyway history in a database.
+ * A table is created into a schema provided by {@link DatasourceExtension}.
+ * History rows can be inserted with model {@link FlywayVersion}.
+ * <p>Example of use with default flyway history table</p>
+ * <pre><code>
+ *     private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource.builder()
+ *             .setCatalog("test_db")
+ *             .build();
+ *     private static final WithFlywaySchemaHistory wFlywayHistory = WithFlywaySchemaHistory.builder(wDataSource)
+ *             .addVersion(FlywayVersion.builder()
+ *                              .version("1.0")
+ *                              .script("V1_0__my_custom_script.sql")
+ *                              .type(MigrationType.SQL)
+ *                              .description("my custom script")
+ *                              .checksum(1230145397)
+ *                              .installedBy("test_db")
+ *                              .installedOn(Instant.now())
+ *                              .success(true)
+ *                              .build)
+ *             .build();
+ *
+ *    {@literal @}RegisterExtension
+ *     static final ChainedExtension chain = ChainedExtension.outer(wDataSource)
+ *             .append(wFlywayHistory)
+ *             .register();
+ * </code></pre>
+ * <p>A customized history table name can also be defined.</p>
+ * <pre><code>
+ *     private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource.builder()
+ *             .setCatalog("test_db")
+ *             .build();
+ *     private static final WithFlywaySchemaHistory wFlywayHistory = WithFlywaySchemaHistory.builder(wDataSource)
+ *             .setTableName("my_custom_flyway_history")
+ *             .addVersion(FlywayVersion.builder()
+ *                              .version("1.0")
+ *                              .script("V1_0__my_custom_script.sql")
+ *                              .type(MigrationType.SQL)
+ *                              .description("my custom script")
+ *                              .checksum(1230145397)
+ *                              .installedBy("test_db")
+ *                              .installedOn(Instant.now())
+ *                              .success(true)
+ *                              .build)
+ *             .build();
+ *
+ *    {@literal @}RegisterExtension
+ *     static final ChainedExtension chain = ChainedExtension.outer(wDataSource)
+ *             .append(wFlywayHistory)
+ *             .register();
+ * </code></pre>
  */
 public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeEachCallback {
 
@@ -43,10 +92,6 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
         this.dataSourceExtension = dataSourceExtension;
         this.versions = ImmutableList.copyOf(versions);
         this.tableName = tableName;
-    }
-
-    public static WithFlywaySchemaHistoryBuilder builder(DatasourceExtension datasourceExtension) {
-        return new WithFlywaySchemaHistoryBuilder(datasourceExtension);
     }
 
     @Override
@@ -97,6 +142,19 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
         return new FlywayTable(tableName, schema);
     }
 
+    /**
+     * Create a builder for this class.
+     *
+     * @param datasourceExtension {@link DatasourceExtension} to get the schema where Flyway history table will be created.
+     * @return {@link WithFlywaySchemaHistoryBuilder}.
+     */
+    public static WithFlywaySchemaHistoryBuilder builder(DatasourceExtension datasourceExtension) {
+        return new WithFlywaySchemaHistoryBuilder(datasourceExtension);
+    }
+
+    /**
+     * Builder class for {@link WithFlywaySchemaHistory} extension.
+     */
     public static final class WithFlywaySchemaHistoryBuilder {
 
         private final DatasourceExtension dataSourceExtension;
@@ -107,26 +165,53 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
             this.dataSourceExtension = datasourceExtension;
         }
 
+        /**
+         * Define a customized name for the history table.
+         * If not set, the name of the table will be given by Flyway basic configuration.
+         *
+         * @param tableName Name to set for the history table.
+         * @return Builder instance.
+         */
         public WithFlywaySchemaHistoryBuilder setTableName(String tableName) {
             this.tableName = tableName;
             return this;
         }
 
+        /**
+         * Add a version into the history.
+         *
+         * @param version {@link FlywayVersion} to insert into the history table.
+         * @return Builder instance.
+         */
         public WithFlywaySchemaHistoryBuilder addVersion(FlywayVersion version) {
             allVersions.add(version);
             return this;
         }
 
-        public WithFlywaySchemaHistoryBuilder addVersions(FlywayVersion... version) {
-            allVersions.add(version);
+        /**
+         * Add many versions into the history.
+         *
+         * @param versions {@link FlywayVersion} to insert into the history table.
+         * @return Builder instance.
+         */
+        public WithFlywaySchemaHistoryBuilder addVersions(FlywayVersion... versions) {
+            allVersions.add(versions);
             return this;
         }
 
+        /**
+         * Build the extension.
+         *
+         * @return The built {@link WithFlywaySchemaHistory}.
+         */
         public WithFlywaySchemaHistory build() {
             return new WithFlywaySchemaHistory(dataSourceExtension, allVersions.build(), tableName);
         }
     }
 
+    /**
+     * Internal Flyway JOOQ table.
+     */
     @VisibleForTesting
     @EqualsAndHashCode(callSuper = true)
     static final class FlywayTable extends TableImpl<Record> {
