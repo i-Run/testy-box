@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -118,8 +119,7 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
         final InsertValuesStepN<Record> query = dslContext.insertInto(flywayTable)
                 .columns(flywayTable.getFields());
         versions.stream()
-                .map(version -> ImmutableList.of(
-                        installedRank.addAndGet(1),
+                .map(version -> Arrays.asList(installedRank.addAndGet(1),
                         version.version,
                         version.description,
                         version.type,
