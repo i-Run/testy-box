@@ -54,7 +54,7 @@ class WithFlywaySchemaHistoryCustomTableTest {
                         .description(historyTable.description.get(r))
                         .executionTime(historyTable.executionTime.get(r))
                         .installedBy(historyTable.installedBy.get(r))
-                        .installedOn(historyTable.installedOn.get(r).toInstant())
+                        .installationDate(historyTable.installedOn.get(r).toInstant())
                         .script(historyTable.script.get(r))
                         .success(historyTable.success.get(r))
                         .type(MigrationType.valueOf(historyTable.type.get(r)))

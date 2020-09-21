@@ -9,7 +9,7 @@ public final class FlywayVersionDataSet {
 
     public static final FlywayVersion VERSION_1 = FlywayVersion.builder()
             .version("1")
-            .installedOn(Instant.EPOCH)
+            .installationDate(Instant.EPOCH)
             .checksum(1)
             .description("description-1")
             .executionTime(1)
@@ -20,7 +20,7 @@ public final class FlywayVersionDataSet {
             .build();
     public static final FlywayVersion VERSION_2 = FlywayVersion.builder()
             .version("2")
-            .installedOn(Instant.EPOCH)
+            .installationDate(Instant.EPOCH)
             .checksum(1)
             .description("description-2")
             .executionTime(2)
@@ -31,7 +31,7 @@ public final class FlywayVersionDataSet {
             .build();
     public static final FlywayVersion VERSION_3 = FlywayVersion.builder()
             .version("3")
-            .installedOn(Instant.EPOCH)
+            .installationDate(Instant.EPOCH)
             .checksum(1)
             .description("description-3")
             .executionTime(3)

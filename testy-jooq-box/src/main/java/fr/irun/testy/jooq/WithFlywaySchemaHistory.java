@@ -126,7 +126,7 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
                         version.script,
                         version.checksum,
                         version.installedBy,
-                        version.installedOn,
+                        version.installationDate,
                         version.executionTime,
                         version.success
                 )).forEach(query::values);

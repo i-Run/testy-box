@@ -46,7 +46,7 @@ public class FlywayVersion {
     /**
      * Date when the migration has been executed.
      */
-    public final Instant installedOn;
+    public final Instant installationDate;
 
     /**
      * Time spent by the migration execution in millis.
