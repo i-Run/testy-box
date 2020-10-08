@@ -10,6 +10,7 @@ variables:
   MAVEN_CLI_OPTS:
     "--batch-mode -Dmaven.repo.local=${CI_PROJECT_DIR}/.m2/repository
       --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
+  GIT_SSH_COMMAND: "ssh -i ${CI_PROJECT_DIR}/git_ssh_private_key"
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -29,6 +30,11 @@ workflow:
       when: never
     - when: always
 
+before_script:
+  - cat "${GIT_SSH_PRIVATE_KEY}" > "${CI_PROJECT_DIR}/git_ssh_private_key"
+  - chmod 600 "${CI_PROJECT_DIR}/git_ssh_private_key"
+
+
 shell-check:
   stage: test
   script:
@@ -38,6 +44,8 @@ shell-check:
 maven:build:
   stage: build
   before_script:
+    - cat "${GIT_SSH_PRIVATE_KEY}" > "${CI_PROJECT_DIR}/git_ssh_private_key"
+    - chmod 600 "${CI_PROJECT_DIR}/git_ssh_private_key"
     - find "${CI_PROJECT_DIR}/.m2/repository" -type f -name "*SNAPSHOT*" -delete || true
     - .gitlab/install-deps.sh -c $CI_COMMIT_REF_NAME
   script:
@@ -92,6 +100,8 @@ maven:release:
   dependencies:
     - maven:build
   before_script:
+    - cat "${GIT_SSH_PRIVATE_KEY}" > "${CI_PROJECT_DIR}/git_ssh_private_key"
+    - chmod 600 "${CI_PROJECT_DIR}/git_ssh_private_key"
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
