@@ -34,7 +34,6 @@ before_script:
   - cat "${GIT_SSH_PRIVATE_KEY}" > "${CI_PROJECT_DIR}/git_ssh_private_key"
   - chmod 600 "${CI_PROJECT_DIR}/git_ssh_private_key"
 
-
 shell-check:
   stage: test
   script:
