@@ -87,9 +87,10 @@ maven:test:
 
 🖍yaml:lint:
   stage: test
-  image: d.i-run.fr/irun-python-tester:20200609.8d054389
+  image: python:3-slim
   before_script:
-    - echo 'je surcharge le before_script global' || true
+    - export PATH="$PATH:~/.local/bin"
+    - pip install --user yamllint
   script:
     - yamllint --strict .
 
