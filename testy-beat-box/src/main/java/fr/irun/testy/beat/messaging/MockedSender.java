@@ -13,6 +13,32 @@ import java.util.UUID;
 
 /**
  * Mocked sender injectable with {@link fr.irun.testy.beat.extensions.WithRabbitMock}.
+ * <p>
+ * Usage:
+ * <pre style="code">
+ * {@literal @}Test
+ * void my_test(MockedSender mockedSender) {
+ *     final String request = "test-request";
+ *     final AmqpMessage message = AmqpMessage.of(request.getBytes());
+ *
+ *     mockedSender.basicPublish(message).on("my-exchange", "my-routing-key");
+ *
+ *     // Verify the tested consumer
+ * }
+ * </pre>
+ * <p>
+ * RPC requests can also be sent:
+ * <pre style="code">
+ * {@literal @}Test
+ * void my_test(MockedSender mockedSender) {
+ *     final String request = "test-request";
+ *     final AmqpMessage message = AmqpMessage.of(request.getBytes());
+ *
+ *     final Mono&lt;Delivery&gt; actualResponse = mockedSender.rpc(message).on("my-exchange", "my-routing-key");
+ *
+ *     // Verify the tested consumer and the response
+ * }
+ * </pre>
  */
 public class MockedSender {
 
