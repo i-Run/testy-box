@@ -1,4 +1,4 @@
-package fr.irun.testy.beat.messaging.receivers;
+package fr.irun.testy.beat.messaging;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
@@ -24,9 +24,9 @@ final class MockedConsumer extends DefaultConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MockedConsumer.class);
 
-    private final Queue<MockedResponse> responses;
+    private final Queue<AmqpMessage> responses;
     private final AtomicInteger remainingRequests;
-    private final AtomicReference<MockedResponse> currentResponse = new AtomicReference<>();
+    private final AtomicReference<AmqpMessage> currentResponse = new AtomicReference<>();
 
     private final EmitterProcessor<Delivery> requests = EmitterProcessor.create();
     private final FluxSink<Delivery> requestsSink = requests.sink();
@@ -40,7 +40,7 @@ final class MockedConsumer extends DefaultConsumer {
      */
     MockedConsumer(Channel channel,
                    int nbRequests,
-                   Queue<MockedResponse> responses) {
+                   Queue<AmqpMessage> responses) {
         super(channel);
         this.responses = responses;
         this.remainingRequests = new AtomicInteger(nbRequests);
@@ -87,7 +87,7 @@ final class MockedConsumer extends DefaultConsumer {
     }
 
     private void replyToMessage(AMQP.BasicProperties requestProperties) throws IOException {
-        final MockedResponse response = Optional.ofNullable(responses.poll())
+        final AmqpMessage response = Optional.ofNullable(responses.poll())
                 .map(d -> {
                     currentResponse.set(d);
                     return d;

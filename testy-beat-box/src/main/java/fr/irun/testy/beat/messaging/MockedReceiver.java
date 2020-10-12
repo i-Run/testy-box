@@ -1,4 +1,4 @@
-package fr.irun.testy.beat.messaging.receivers;
+package fr.irun.testy.beat.messaging;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Delivery;

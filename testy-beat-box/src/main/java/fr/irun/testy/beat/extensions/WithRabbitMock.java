@@ -8,6 +8,8 @@ import fr.irun.testy.beat.brokers.EmbeddedBroker;
 import fr.irun.testy.beat.brokers.QpidEmbeddedBroker;
 import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
+import fr.irun.testy.beat.messaging.MockedReceiverFactory;
+import fr.irun.testy.beat.messaging.MockedSender;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -145,6 +147,8 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
     private static final String P_RABBIT_RECEIVER_OPT = "rabbit-receiver-opt";
     private static final String P_RABBIT_AMQP_RECEIVER_PREFIX = "rabbit-amqp-receiver-";
+    private static final String P_MOCKED_RECEIVER_FACTORY_PREFIX = "rabbit-mocked-receiver-factory";
+    private static final String P_MOCKED_SENDER_PREFIX = "rabbit-mocked-sender";
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
 
@@ -209,6 +213,8 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
             store.put(P_RABBIT_AMQP_RECEIVER_PREFIX + queue, receiver);
         });
         store.put(P_RABBIT_CHANNEL, channel);
+        store.put(P_MOCKED_RECEIVER_FACTORY_PREFIX, new MockedReceiverFactory(channel));
+        store.put(P_MOCKED_SENDER_PREFIX, new MockedSender(channel));
     }
 
     private AMQPReceiver buildReceiverForQueue(Channel channel, ObjectMapper objectMapper, String queue, String exchange) {
@@ -242,7 +248,9 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
                 || aClass.equals(Channel.class)
                 || aClass.equals(SenderOptions.class)
                 || aClass.equals(ReceiverOptions.class)
-                || aClass.equals(AMQPReceiver.class);
+                || aClass.equals(AMQPReceiver.class)
+                || aClass.equals(MockedReceiverFactory.class)
+                || aClass.equals(MockedSender.class);
     }
 
     @Override
@@ -263,6 +271,12 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         if (AMQPReceiver.class.equals(aClass)) {
             final String queueName = getQueueNameForParameter(parameterContext);
             return getReceiver(extensionContext, queueName);
+        }
+        if (MockedReceiverFactory.class.equals(aClass)) {
+            return getMockedReceiverFactory(extensionContext);
+        }
+        if (MockedSender.class.equals(aClass)) {
+            return getMockedSender(extensionContext);
         }
         throw new ParameterResolutionException("Unable to resolve parameter for Rabbit Channel !");
     }
@@ -335,6 +349,14 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
      */
     public AMQPReceiver getReceiver(ExtensionContext context, String queueName) {
         return getStore(context).get(P_RABBIT_AMQP_RECEIVER_PREFIX + queueName, AMQPReceiver.class);
+    }
+
+    private MockedReceiverFactory getMockedReceiverFactory(ExtensionContext context) {
+        return getStore(context).get(P_MOCKED_RECEIVER_FACTORY_PREFIX, MockedReceiverFactory.class);
+    }
+
+    private MockedSender getMockedSender(ExtensionContext context) {
+        return getStore(context).get(P_MOCKED_SENDER_PREFIX, MockedSender.class);
     }
 
     /**

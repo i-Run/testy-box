@@ -1,14 +1,14 @@
-package fr.irun.testy.beat.messaging.receivers;
+package fr.irun.testy.beat.messaging;
 
 import com.google.common.collect.ImmutableMap;
 import lombok.Builder;
 import lombok.Singular;
 
 /**
- * Class used to define the response to be returned by {@link MockedReceiverFactory}.
+ * Class wrapping the body and the headers of an AMQP message.
  */
 @Builder
-public final class MockedResponse {
+public final class AmqpMessage {
 
     public final byte[] body;
 
@@ -19,10 +19,10 @@ public final class MockedResponse {
      * Create a simple response
      *
      * @param body Body of the response.
-     * @return {@link MockedResponse}.
+     * @return {@link AmqpMessage}.
      */
-    public static MockedResponse of(byte[] body) {
-        return new MockedResponse(body, ImmutableMap.of());
+    public static AmqpMessage of(byte[] body) {
+        return new AmqpMessage(body, ImmutableMap.of());
     }
 
 }

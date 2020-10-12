@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * An {@link AMQPReceiver} is automatically created for each queue added into the test extension.
  * This receiver is re-created for each test and can be injected as parameter.
  *
- * @deprecated Use instead {@link fr.irun.testy.beat.messaging.receivers.MockedReceiverFactory}, also injectable by Rabbit extension.
+ * @deprecated Use instead {@link MockedReceiverFactory}, also injectable by Rabbit extension.
  */
 @Deprecated
 public final class AMQPReceiver {

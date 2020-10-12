@@ -5,9 +5,6 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.extensions.WithRabbitMock;
-import fr.irun.testy.beat.messaging.receivers.MockedReceiver;
-import fr.irun.testy.beat.messaging.receivers.MockedReceiverFactory;
-import fr.irun.testy.beat.messaging.receivers.MockedResponse;
 import fr.irun.testy.beat.utils.samples.TestModel;
 import fr.irun.testy.core.extensions.ChainedExtension;
 import fr.irun.testy.core.extensions.WithObjectMapper;
@@ -108,7 +105,7 @@ class MockedReceiverFactoryTest {
         final int responseHeaderValue = 200;
 
         final MockedReceiver receiver = tested.consumeOne().on(QUEUE)
-                .thenRespond(MockedResponse.builder()
+                .thenRespond(AmqpMessage.builder()
                         .body(objectMapper.writeValueAsBytes(response))
                         .header(responseHeaderKey, responseHeaderValue)
                         .build())

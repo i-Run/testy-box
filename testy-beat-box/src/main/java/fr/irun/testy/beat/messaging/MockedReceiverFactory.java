@@ -1,4 +1,4 @@
-package fr.irun.testy.beat.messaging.receivers;
+package fr.irun.testy.beat.messaging;
 
 import com.rabbitmq.client.Channel;
 import lombok.AccessLevel;
@@ -51,7 +51,7 @@ import java.util.concurrent.ArrayBlockingQueue;
  * }
  * </pre>
  * <p>
- * Some {@link MockedResponse} can be added to the mock. The responses are returned in the same order as declared.
+ * Some {@link AmqpMessage} can be added to the mock. The responses are returned in the same order as declared.
  * If there are more responses than requests, the last response is replied indefinitely.
  * <pre style="code">
  * {@literal @}Test
@@ -60,7 +60,7 @@ import java.util.concurrent.ArrayBlockingQueue;
  *     final String expectedResponse = "test-response";
  *
  *     final MockedReceiver receiver = receiverFactory.consumeOne().on("my-queue")
- *             .thenRespond(MockedResponse.of(expectedResponse.getBytes()))
+ *             .thenRespond(AmqpMessage.of(expectedResponse.getBytes()))
  *             .start();
  *
  *     final RpcClient rpcClient = new RpcClient(Mono.just(channel), "my-exchange", "", () -&gt; UUID.randomUUID().toString());
@@ -94,6 +94,15 @@ public final class MockedReceiverFactory {
      */
     public MockedReceiverFactory(Channel channel) {
         this.channel = channel;
+    }
+
+    /**
+     * Obtain the channel related to this factory.
+     *
+     * @return Channel related to this factory.
+     */
+    public Channel getChannel() {
+        return this.channel;
     }
 
     /**
@@ -143,7 +152,7 @@ public final class MockedReceiverFactory {
         private final String queueName;
         private final int nbRequests;
 
-        private final Queue<MockedResponse> responses;
+        private final Queue<AmqpMessage> responses;
 
         private MockedReceiverBuilder(Channel channel,
                                       int nbRequests,
@@ -161,7 +170,7 @@ public final class MockedReceiverFactory {
          * @param response The response to add.
          * @return Builder instance.
          */
-        public MockedReceiverBuilder thenRespond(MockedResponse response) {
+        public MockedReceiverBuilder thenRespond(AmqpMessage response) {
             this.responses.offer(response);
             return this;
         }

@@ -3,8 +3,13 @@ package fr.irun.testy.beat.extensions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
+import fr.irun.testy.beat.messaging.AmqpMessage;
+import fr.irun.testy.beat.messaging.MockedReceiver;
+import fr.irun.testy.beat.messaging.MockedReceiverFactory;
+import fr.irun.testy.beat.messaging.MockedSender;
 import fr.irun.testy.core.extensions.ChainedExtension;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,6 +20,10 @@ import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import javax.inject.Named;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Optional;
 
 import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
@@ -88,12 +97,12 @@ class WithRabbitMockTest {
     }
 
     @Test
-    void should_inject_sender(SenderOptions tested) {
+    void should_inject_sender_options(SenderOptions tested) {
         assertThat(tested).isSameAs(senderOptions);
     }
 
     @Test
-    void should_inject_receiver(ReceiverOptions tested) {
+    void should_inject_receiver_options(ReceiverOptions tested) {
         assertThat(tested).isSameAs(receiverOptions);
     }
 
@@ -150,4 +159,31 @@ class WithRabbitMockTest {
         assertThat(receiver.getNextMessage()).isEmpty();
     }
 
+    @Test
+    void should_inject_mocked_sender_and_receiver(MockedReceiverFactory receiverFactory,
+                                                  MockedSender sender) {
+        final String request = "test-request";
+        final String response = "test-response";
+
+        final Charset encoding = StandardCharsets.UTF_8;
+        final Duration timeout = Duration.ofMillis(400);
+
+        final MockedReceiver receiver = receiverFactory.consumeOne()
+                .on(QUEUE_1)
+                .thenRespond(AmqpMessage.of(response.getBytes(encoding)))
+                .start();
+
+        final String actualResponse = sender.rpc(AmqpMessage.of(request.getBytes(encoding))).on(EXCHANGE_1, "")
+                .map(Delivery::getBody)
+                .map(b -> new String(b, encoding))
+                .block(timeout);
+        assertThat(actualResponse).isEqualTo(response);
+
+        final String actualRequest = receiver.getReceivedMessages()
+                .single()
+                .map(Delivery::getBody)
+                .map(b -> new String(b, encoding))
+                .block(timeout);
+        assertThat(actualRequest).isEqualTo(request);
+    }
 }
