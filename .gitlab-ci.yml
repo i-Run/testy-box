@@ -1,5 +1,5 @@
 ---
-image: d.i-run.fr/irun-compiler:jdk8-20200819.dfdc7d46
+image: d.i-run.fr/irun-compiler:jdk8-20200930.a479ebca
 
 variables:
   # CHAT_WEBHOOK_URL: Must exists in group variables or projet variables
@@ -42,19 +42,16 @@ shell-check:
 
 maven:build:
   stage: build
-  before_script:
-    - cat "${GIT_SSH_PRIVATE_KEY}" > "${CI_PROJECT_DIR}/git_ssh_private_key"
-    - chmod 600 "${CI_PROJECT_DIR}/git_ssh_private_key"
+  script:
     - find "${CI_PROJECT_DIR}/.m2/repository" -type f -name "*SNAPSHOT*" -delete || true
     - .gitlab/install-deps.sh -c $CI_COMMIT_REF_NAME
-  script:
     - mvn ${MAVEN_CLI_OPTS} clean install -DskipTests
   artifacts:
     when: on_success
     expire_in: 1 hour
     untracked: true
 
-maven:checkstyle:
+🖍maven:checkstyle:
   stage: test
   dependencies:
     - maven:build
@@ -63,7 +60,7 @@ maven:checkstyle:
   script:
     - mvn ${MAVEN_CLI_OPTS} install checkstyle:check -DskipTests
 
-maven:javadoc:
+📚maven:javadoc:
   stage: test
   dependencies:
     - maven:build
@@ -98,13 +95,10 @@ maven:release:
   stage: release
   dependencies:
     - maven:build
-  before_script:
-    - cat "${GIT_SSH_PRIVATE_KEY}" > "${CI_PROJECT_DIR}/git_ssh_private_key"
-    - chmod 600 "${CI_PROJECT_DIR}/git_ssh_private_key"
+  script:
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
-  script:
     - |
       mvn ${MAVEN_CLI_OPTS} \
         release:prepare \
