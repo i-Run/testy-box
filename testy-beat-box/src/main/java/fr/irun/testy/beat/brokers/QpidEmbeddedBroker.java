@@ -15,12 +15,12 @@ import java.util.concurrent.TimeoutException;
  */
 public final class QpidEmbeddedBroker implements EmbeddedBroker {
 
-    private static final String DEFAULT_CONFIG_FILE = "embedded-broker.json";
-    private static final String DEFAULT_HOST = "localhost";
-    private static final int DEFAULT_PORT = 9595;
-    private static final String DEFAULT_USERNAME = "obiwan";
-    private static final String DEFAULT_PASS = "kenobi";
+    public static final String DEFAULT_HOST = "localhost";
+    public static final int DEFAULT_PORT = 9595;
+    public static final String DEFAULT_USERNAME = "obiwan";
+    public static final String DEFAULT_PASS = "kenobi";
 
+    private static final String DEFAULT_CONFIG_FILE = "embedded-broker.json";
     private final SystemLauncher systemLauncher;
     private final ConnectionFactory connectionFactory;
 
