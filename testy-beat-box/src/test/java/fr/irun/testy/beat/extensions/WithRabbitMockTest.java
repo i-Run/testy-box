@@ -172,7 +172,8 @@ class WithRabbitMockTest {
                 .thenRespond(AmqpMessage.of(response.getBytes(encoding)))
                 .start();
 
-        final String actualResponse = mockedSender.rpc(AmqpMessage.of(request.getBytes(encoding))).on(EXCHANGE_1, "")
+        final String actualResponse = mockedSender.rpc(AmqpMessage.of(request.getBytes(encoding)))
+                .on(EXCHANGE_1, "")
                 .map(Delivery::getBody)
                 .map(b -> new String(b, encoding))
                 .block(timeout);

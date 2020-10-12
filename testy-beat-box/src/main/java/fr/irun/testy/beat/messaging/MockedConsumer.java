@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Internal consumer to consume messages on a queue and
+ * Internal consumer to consume messages on a queue and respond.
  */
 final class MockedConsumer extends DefaultConsumer {
 
@@ -51,7 +51,7 @@ final class MockedConsumer extends DefaultConsumer {
      *
      * @return All the requests received by the consumer.
      */
-    Flux<Delivery> getRequests() {
+    Flux<Delivery> getReceivedRequests() {
         return requests;
     }
 

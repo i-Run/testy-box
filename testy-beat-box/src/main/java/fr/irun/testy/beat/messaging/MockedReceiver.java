@@ -170,7 +170,7 @@ public final class MockedReceiver {
             final MockedConsumer consumer = new MockedConsumer(channel, nbRequests, responses);
             try {
                 channel.basicConsume(queue, true, consumer);
-                return consumer.getRequests();
+                return consumer.getReceivedRequests();
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
