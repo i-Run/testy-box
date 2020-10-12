@@ -8,7 +8,6 @@ import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import fr.irun.testy.beat.messaging.AmqpMessage;
 import fr.irun.testy.beat.messaging.MockedReceiver;
-import fr.irun.testy.beat.messaging.MockedReceiverFactory;
 import fr.irun.testy.beat.messaging.MockedSender;
 import fr.irun.testy.core.extensions.ChainedExtension;
 import fr.irun.testy.core.extensions.WithObjectMapper;
@@ -16,11 +15,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import reactor.core.publisher.Flux;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
 import javax.inject.Named;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -160,26 +159,26 @@ class WithRabbitMockTest {
     }
 
     @Test
-    void should_inject_mocked_sender_and_receiver(MockedReceiverFactory receiverFactory,
-                                                  MockedSender sender) {
+    void should_inject_mocked_sender_and_receiver(MockedReceiver mockedReceiver,
+                                                  MockedSender mockedSender) {
         final String request = "test-request";
         final String response = "test-response";
 
         final Charset encoding = StandardCharsets.UTF_8;
         final Duration timeout = Duration.ofMillis(400);
 
-        final MockedReceiver receiver = receiverFactory.consumeOne()
+        final Flux<Delivery> receivedMessages = mockedReceiver.consumeOne()
                 .on(QUEUE_1)
                 .thenRespond(AmqpMessage.of(response.getBytes(encoding)))
                 .start();
 
-        final String actualResponse = sender.rpc(AmqpMessage.of(request.getBytes(encoding))).on(EXCHANGE_1, "")
+        final String actualResponse = mockedSender.rpc(AmqpMessage.of(request.getBytes(encoding))).on(EXCHANGE_1, "")
                 .map(Delivery::getBody)
                 .map(b -> new String(b, encoding))
                 .block(timeout);
         assertThat(actualResponse).isEqualTo(response);
 
-        final String actualRequest = receiver.getReceivedMessages()
+        final String actualRequest = receivedMessages
                 .single()
                 .map(Delivery::getBody)
                 .map(b -> new String(b, encoding))

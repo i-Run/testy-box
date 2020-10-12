@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.rabbitmq.OutboundMessage;
 import reactor.rabbitmq.RabbitFlux;
@@ -31,8 +32,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-
-class MockedReceiverFactoryTest {
+class MockedReceiverTest {
 
     private static final String QUEUE = "test-queue";
     private static final String EXCHANGE = "test-exchange";
@@ -66,31 +66,31 @@ class MockedReceiverFactoryTest {
     private RpcClient rpcClient;
     private ObjectMapper objectMapper;
 
-    private MockedReceiverFactory tested;
+    private MockedReceiver tested;
 
     @BeforeEach
     void setUp(Channel channel, ObjectMapper objectMapper) {
         this.rpcClient = new RpcClient(Mono.just(channel), EXCHANGE, "", () -> UUID.randomUUID().toString());
         this.objectMapper = objectMapper;
 
-        tested = new MockedReceiverFactory(channel);
+        tested = new MockedReceiver(channel);
     }
 
     @Test
-    void should_store_messages_sent_to_queue() {
+    void should_capture_messages_sent_on_queue() {
         final int nbRequests = 5;
 
         final String[] messages = IntStream.range(0, nbRequests)
                 .mapToObj(i -> "test-message-" + i)
                 .toArray(String[]::new);
 
-        final MockedReceiver receiver = tested.consume(nbRequests).on(QUEUE).start();
+        final Flux<Delivery> receivedMessage = tested.consume(nbRequests).on(QUEUE).start();
 
         Stream.of(messages)
                 .map(s -> new OutboundMessage(EXCHANGE, "", s.getBytes(StandardCharsets.UTF_8)))
                 .forEach(m -> sender.send(Mono.just(m)).block());
 
-        final List<String> actualReceived = receiver.getReceivedMessages()
+        final List<String> actualReceived = receivedMessage
                 .map(d -> new String(d.getBody(), StandardCharsets.UTF_8))
                 .collectList()
                 .block(BLOCK_TIMEOUT);
@@ -104,7 +104,7 @@ class MockedReceiverFactoryTest {
         final String responseHeaderKey = "status";
         final int responseHeaderValue = 200;
 
-        final MockedReceiver receiver = tested.consumeOne().on(QUEUE)
+        final Flux<Delivery> receivedMessage = tested.consumeOne().on(QUEUE)
                 .thenRespond(AmqpMessage.builder()
                         .body(objectMapper.writeValueAsBytes(response))
                         .header(responseHeaderKey, responseHeaderValue)
@@ -121,9 +121,7 @@ class MockedReceiverFactoryTest {
         assertThat(actualHeaders).isNotNull();
         assertThat(actualHeaders.get(responseHeaderKey)).isEqualTo(responseHeaderValue);
 
-        final Delivery actualRequest = receiver.getReceivedMessages()
-                .single()
-                .block(BLOCK_TIMEOUT);
+        final Delivery actualRequest = receivedMessage.single().block(BLOCK_TIMEOUT);
         assertThat(actualRequest).isNotNull();
         assertThat(objectMapper.readValue(actualRequest.getBody(), String.class)).isEqualTo(request);
     }

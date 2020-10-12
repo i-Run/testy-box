@@ -12,7 +12,8 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Mocked sender injectable with {@link fr.irun.testy.beat.extensions.WithRabbitMock}.
+ * Mocked sender injectable by the extension {@link fr.irun.testy.beat.extensions.WithRabbitMock}.
+ * This sender allows publishing AMQP messages and RPC requests.
  * <p>
  * Usage:
  * <pre style="code">

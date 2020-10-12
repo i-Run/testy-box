@@ -72,7 +72,7 @@ final class MockedConsumer extends DefaultConsumer {
                 }
             }
             if (remaining <= 0) {
-                LOGGER.debug("Cancel consumer with tag '{}'", consumerTag);
+                LOGGER.debug("Stop consumer with tag '{}'", consumerTag);
                 getChannel().basicCancel(consumerTag);
                 requestsSink.complete();
             }
