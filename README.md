@@ -379,8 +379,12 @@ static final WithRabbitMock withRabbitMock = WithRabbitMock
 
 The queues are deleted automatically by closing the connection after each test method.
 
-If queues are declared, an [AMQPReceiver](https://rocket.i-run.si/javadoc/fr/irun/testy/beat/messaging/AMQPReceiver.html) can be injected as parameter for each queue.
-This receiver can consume messages on the declared queue and reply.
+In order to simplify mocking of rabbit queues, Mocked sender and receiver can be injected to the test:
+
+- [MockedSender](https://rocket.i-run.si/javadoc/fr/irun/testy/beat/messaging/MockedSender.html)
+- [MockedReceiver](https://rocket.i-run.si/javadoc/fr/irun/testy/beat/messaging/MockedReceiver.html)
+
+These mocks use [AmqpMessage](https://rocket.i-run.si/javadoc/fr/irun/testy/beat/messaging/AmqpMessage.html) as requests/responses. **AmqpMessage** can define the body and the headers of the message.
 
 ```java
 @RegisterExtension
@@ -390,28 +394,37 @@ static final WithRabbitMock withRabbitMock = WithRabbitMock
             .build();
 
 @Test
-void myTest(AMQPReceiver receiver) {
-    receiver.consumeAndReply("my-mocked-response");
+void myTest(MockedSender mockedSender) {
+    final AmqpMessage request = AmqpMessage.of("test-request".getBytes());
+    final String routingKey = "";
 
+    // Simply publish a message on the tested queue
+    mockedSender.basicPublish(request)
+                .on("my_exchange", routingKey);
+
+    // Send a RPC request
+    final Mono<Delivery> response = mockedSender.rpc(request)
+                .on("my_exchange", routingKey);
     // (...)
-
-    final Stream<Delivery> messagesOnQueue = receiver.getMessages();
 }
 ```
-
-If many queues are declared in the extension, the parameter shall be annotated with `javax.inject.Named`.
 
 ```java
 @RegisterExtension
 static final WithRabbitMock withRabbitMock = WithRabbitMock
             .builder()
-            .declareQueueAndExchange("my_queue_1", "my_exchange_1")
-            .declareQueueAndExchange("my_queue_2", "my_exchange_2")
+            .declareQueueAndExchange("my_queue", "my_exchange")
             .build();
 
 @Test
-void myTest(@Named("my_queue_1") AMQPReceiver receiver1,
-            @Named("my_queue_2") AMQPReceiver receiver2) {
+void myTest(MockedReceiver mockedReceiver) {
+    final AmqpMessage response = AmqpMessage.of("test-response".getBytes());
+
+    // To consume more than one message, use consume(int)
+    final Flux<Delivery> requests = mockedReceiver.consumeOne()
+                  .on("my_queue")
+                  .thenRespond(response)
+                  .start();
     // (...)
 }
 ```

@@ -8,6 +8,8 @@ import fr.irun.testy.beat.brokers.EmbeddedBroker;
 import fr.irun.testy.beat.brokers.QpidEmbeddedBroker;
 import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
+import fr.irun.testy.beat.messaging.MockedReceiver;
+import fr.irun.testy.beat.messaging.MockedSender;
 import fr.irun.testy.core.extensions.WithObjectMapper;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -40,7 +42,7 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     <li>Opens an AMQP connection and channel on each test (closes after)</li>
  *     <li>Builds sender and receiver options, injectable as test parameters</li>
  *     <li>Can declare many queues with related exchanges</li>
- *     <li>For each queue, builds an {@link AMQPReceiver}, injectable as test parameter</li>
+ *     <li>Builds a {@link MockedSender} and a {@link MockedReceiver} to simplify the mocking of the queues.</li>
  * </ul>
  * <p>
  * Usage :
@@ -72,19 +74,21 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     <li>Consume the messages from the queue</li>
  *     <li>Apply a treatment on the message (specific to each listener)</li>
  *     <li>Reply another message on the reply queue</li>
+ *     <li>The {@link MockedSender} can be used to simplify the sending of messages on a queue.</li>
  * </ul>
  * <p>
- * Note that the request and response can be customized objects, serialized by the input {@link ObjectMapper}.
  * <pre style="code">
  *     {@literal @}Test
- *     void should_consume_queue_and_reply_message(SenderOptions senderOptions, ObjectMapper objectMapper) {
- *          // Here the tested listener creates and consumes QUEUE_1
+ *     void should_consume_queue_and_reply_message(MockedSender mockedSender, ObjectMapper objectMapper) {
+ *          // Here the tested listener creates a queue and consumes on it.
  *          tested.subscribe();
  *
  *          final String request = "message sent to tested";
- *          final String actualResponse = AMQPHelper.emitWithReply(request, senderOptions, objectMapper, EXCHANGE_1)
- *                  .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
- *                  .block();
+ *          final byte[] requestBody = DeliveryMappingHelper.writeObjectAsByte(request, objectMapper);
+ *          final String actualResponse = mockedSender.rpc(AmqpMessage.of(requestBody))
+ *                     .on("exchange", "routing-key")
+ *                     .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
+ *                     .block();
  *          assertThat(actualResponse).isEqualTo("expected message replied by tested listener");
  *      }
  * </pre>
@@ -98,41 +102,26 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  * <p>
  * Note that:
  * <ul>
- *     <li>An {@link AMQPReceiver} can be injected to the test, consuming on the queue</li>
- *     <li>This receiver listens to the queue and sends reply with {@link AMQPReceiver#consumeAndReply(Object)}</li>
- *     <li>This receiver provides the messages pushed into the queue by the tested instance with
- *     {@link AMQPReceiver#getMessages()} and {@link AMQPReceiver#getNextMessage()}</li>
- *     <li>If more than one queue has been declared into {@link WithRabbitMock},
- *     use the annotation {@link Named} to discriminate the {@link AMQPReceiver} parameters</li>
- *     <li>The request and response can be customized objects, serialized by the input {@link ObjectMapper}.</li>
+ *     <li>An {@link MockedReceiver} can be injected to the test.</li>
+ *     <li>It can consume a defined number of messages on a queue and reply defined responses.</li>
+ *     <li>The method {@link MockedReceiver.MockedConsumerBuilder#start()} returns all the requests consumed from the queue.</li>
  * </ul>
- *
+ * <p>
  * <pre style="code">
  *     {@literal @}Test
- *     void should_emit_message_and_manage_response(@javax.inject.Named(QUEUE_1) AMQPReceiver receiver,
+ *     void should_emit_message_and_manage_response(MockedReceiver mockedReceiver,
  *                                                  ObjectMapper objectMapper) throws IOException {
  *         final String response = "response from receiver";
- *         receiver.consumeAndReply(response);
+ *         final byte[] responseBody = DeliveryMappingHelper.writeObjectAsByte(response, objectMapper);
+ *         final Flux&lt;Delivery&gt; receivedMessages = receiver.consumeOne()
+ *                  .on("queue")
+ *                  .thenRespond(AmqpMessage.of(responseBody))
+ *                  .start();
  *
+ *         // Tested method sending a message on the queue
  *         tested.execute();
  *
- *         final List&lt;String&gt; actualEmittedMessages = receiver.getMessages()
- *                 .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
- *                 .collect(Collectors.toList());
- *         assertThat(actualEmittedMessages).containsExactly("message sent by tested");
- *     }
- *
- *     // Test when an error is replied
- *     {@literal @}Test
- *     void should_fail_if_listener_answered_with_error(@javax.inject.Named(QUEUE_1) AMQPReceiver receiver,
- *                                                      ObjectMapper objectMapper) throws IOException {
- *         final Throwable error = new Exception("Mocked receiver error");
- *         receiver.consumeAndReply(error);
- *
- *         assertThatThrownBy(tested::execute)
- *                 .isInstanceOf(MyCustomException.class);
- *
- *         final List&lt;String&gt; actualEmittedMessages = receiver.getMessages()
+ *         final List&lt;String&gt; actualEmittedMessages = receivedMessages
  *                 .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
  *                 .collect(Collectors.toList());
  *         assertThat(actualEmittedMessages).containsExactly("message sent by tested");
@@ -145,6 +134,8 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
     private static final String P_RABBIT_RECEIVER_OPT = "rabbit-receiver-opt";
     private static final String P_RABBIT_AMQP_RECEIVER_PREFIX = "rabbit-amqp-receiver-";
+    private static final String P_MOCKED_RECEIVER_PREFIX = "rabbit-mocked-receiver";
+    private static final String P_MOCKED_SENDER_PREFIX = "rabbit-mocked-sender";
 
     private static final Scheduler SCHEDULER = Schedulers.elastic();
 
@@ -209,6 +200,8 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
             store.put(P_RABBIT_AMQP_RECEIVER_PREFIX + queue, receiver);
         });
         store.put(P_RABBIT_CHANNEL, channel);
+        store.put(P_MOCKED_RECEIVER_PREFIX, new MockedReceiver(channel));
+        store.put(P_MOCKED_SENDER_PREFIX, new MockedSender(channel));
     }
 
     private AMQPReceiver buildReceiverForQueue(Channel channel, ObjectMapper objectMapper, String queue, String exchange) {
@@ -242,7 +235,9 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
                 || aClass.equals(Channel.class)
                 || aClass.equals(SenderOptions.class)
                 || aClass.equals(ReceiverOptions.class)
-                || aClass.equals(AMQPReceiver.class);
+                || aClass.equals(AMQPReceiver.class)
+                || aClass.equals(MockedReceiver.class)
+                || aClass.equals(MockedSender.class);
     }
 
     @Override
@@ -263,6 +258,12 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         if (AMQPReceiver.class.equals(aClass)) {
             final String queueName = getQueueNameForParameter(parameterContext);
             return getReceiver(extensionContext, queueName);
+        }
+        if (MockedReceiver.class.equals(aClass)) {
+            return getMockedReceiver(extensionContext);
+        }
+        if (MockedSender.class.equals(aClass)) {
+            return getMockedSender(extensionContext);
         }
         throw new ParameterResolutionException("Unable to resolve parameter for Rabbit Channel !");
     }
@@ -335,6 +336,14 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
      */
     public AMQPReceiver getReceiver(ExtensionContext context, String queueName) {
         return getStore(context).get(P_RABBIT_AMQP_RECEIVER_PREFIX + queueName, AMQPReceiver.class);
+    }
+
+    private MockedReceiver getMockedReceiver(ExtensionContext context) {
+        return getStore(context).get(P_MOCKED_RECEIVER_PREFIX, MockedReceiver.class);
+    }
+
+    private MockedSender getMockedSender(ExtensionContext context) {
+        return getStore(context).get(P_MOCKED_SENDER_PREFIX, MockedSender.class);
     }
 
     /**

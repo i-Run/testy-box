@@ -20,7 +20,10 @@ import java.util.stream.Stream;
  * </ul>
  * An {@link AMQPReceiver} is automatically created for each queue added into the test extension.
  * This receiver is re-created for each test and can be injected as parameter.
+ *
+ * @deprecated Use instead {@link MockedReceiver}, also injectable by Rabbit extension.
  */
+@Deprecated
 public final class AMQPReceiver {
 
     private static final int DEFAULT_QUEUE_CAPACITY = 10;
