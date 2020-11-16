@@ -38,7 +38,8 @@ shell-check:
   stage: test
   script:
     - shellcheck .gitlab/*.sh
-    - shellcheck .gitlab/scripts/*.sh
+    - |
+      [[ ! -d .gitlab/scripts ]] || shellcheck .gitlab/scripts/*.sh
 
 maven:build:
   stage: build
@@ -160,4 +161,3 @@ maven:deploy-snapshot:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "develop"'
       when: on_success
-
