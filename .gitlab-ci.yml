@@ -77,6 +77,7 @@ maven:test:
   artifacts:
     reports:
       junit: [
+        testy-beat-box/target/surefire-reports/TEST-*.xml,
         testy-core-box/target/surefire-reports/TEST-*.xml,
         testy-jooq-box/target/surefire-reports/TEST-*.xml,
         testy-mongo-box/target/surefire-reports/TEST-*.xml
@@ -96,6 +97,7 @@ maven:release:
   dependencies:
     - maven:build
   script:
+    - echo ${GPG_PASSPHRASE} | gpg --batch --import "${GPG_SECRET_KEY}"
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
@@ -107,13 +109,13 @@ maven:release:
           -DscmCommentPrefix="[maven-release][skip CI] " \
           -DdevelopmentVersion="$(.gitlab/bumpVersion.sh)" \
         release:perform \
-          -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
+          -Darguments="-DskipTests=true"
     - git clone "git@gitlab.i-run.fr:${CI_PROJECT_PATH}.git"
     - cd "${CI_PROJECT_NAME}"
     - git checkout master
     - |
       git merge --no-ff \
-        -m "[maven-release][skip CI] Merge release in master" origin/develop~1
+        -m "[maven-release][skip CI] Merge release in master" origin/develop
     - git push origin master
   rules:
     - if: >
@@ -135,15 +137,19 @@ maven:sonar:
     - if: '$CI_COMMIT_REF_NAME == "develop"'
       when: always
 
-maven:deploy:
+maven:deploy-snapshot:
   stage: deploy
   dependencies:
     - maven:build
-  script: mvn ${MAVEN_CLI_OPTS} deploy -DskipTests
+  script: |
+    mvn ${MAVEN_CLI_OPTS} deploy \
+      -DskipTests \
+      -DaltDeploymentRepository="nexus::default::https://nexus.i-run.fr/repository/snapshots/" \
+      -DaltSnapshotDeploymentRepository="nexus" \
+      -DaltReleaseDeploymentRepository="ossrh"
   rules:
     - if: >
         $CI_COMMIT_REF_NAME == "develop"
-        || $CI_COMMIT_REF_NAME == "master"
       when: always
 
 ⚙trigger:unchained:
