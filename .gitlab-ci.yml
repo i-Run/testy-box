@@ -95,6 +95,8 @@ maven:test:
 
 maven:release:
   stage: release
+  variables:
+    PIPELINE_NOTIFY_SUCCESS: "true"
   dependencies:
     - maven:build
   script:
@@ -120,7 +122,7 @@ maven:release:
     - git push origin master
   rules:
     - if: >
-        $CI_COMMIT_REF_NAME == "develop"
+        $CI_COMMIT_REF_NAME == "feature/10-deploy-to-maven-central"
         || $CI_COMMIT_REF_NAME =~ /^support/
       when: manual
       allow_failure: true
