@@ -38,7 +38,8 @@ shell-check:
   stage: test
   script:
     - shellcheck .gitlab/*.sh
-    - shellcheck .gitlab/scripts/*.sh
+    - |
+      [[ ! -d .gitlab/scripts ]] || shellcheck .gitlab/scripts/*.sh
 
 maven:build:
   stage: build
@@ -77,6 +78,7 @@ maven:test:
   artifacts:
     reports:
       junit: [
+        testy-beat-box/target/surefire-reports/TEST-*.xml,
         testy-core-box/target/surefire-reports/TEST-*.xml,
         testy-jooq-box/target/surefire-reports/TEST-*.xml,
         testy-mongo-box/target/surefire-reports/TEST-*.xml
@@ -93,9 +95,12 @@ maven:test:
 
 maven:release:
   stage: release
+  variables:
+    PIPELINE_NOTIFY_SUCCESS: "true"
   dependencies:
     - maven:build
   script:
+    - echo ${GPG_PASSPHRASE} | gpg --batch --import "${GPG_SECRET_KEY}"
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
@@ -107,17 +112,17 @@ maven:release:
           -DscmCommentPrefix="[maven-release][skip CI] " \
           -DdevelopmentVersion="$(.gitlab/bumpVersion.sh)" \
         release:perform \
-          -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
+          -Darguments="-DskipTests=true"
     - git clone "git@gitlab.i-run.fr:${CI_PROJECT_PATH}.git"
     - cd "${CI_PROJECT_NAME}"
     - git checkout master
     - |
       git merge --no-ff \
-        -m "[maven-release][skip CI] Merge release in master" origin/develop~1
+        -m "[maven-release][skip CI] Merge release in master" origin/develop
     - git push origin master
   rules:
     - if: >
-        $CI_COMMIT_REF_NAME == "develop"
+        $CI_COMMIT_REF_NAME == "feature/10-deploy-to-maven-central"
         || $CI_COMMIT_REF_NAME =~ /^support/
       when: manual
       allow_failure: true
@@ -130,20 +135,24 @@ maven:sonar:
   cache:
     policy: pull
   script:
-    - mvn ${MAVEN_CLI_OPTS} test sonar:sonar -Psonar
+    - mvn ${MAVEN_CLI_OPTS} test sonar:sonar -Psonar ${SONAR_CONFIG}
   rules:
     - if: '$CI_COMMIT_REF_NAME == "develop"'
       when: always
 
-maven:deploy:
+maven:deploy-snapshot:
   stage: deploy
   dependencies:
     - maven:build
-  script: mvn ${MAVEN_CLI_OPTS} deploy -DskipTests
+  script: |
+    mvn ${MAVEN_CLI_OPTS} deploy \
+      -DskipTests \
+      -DaltDeploymentRepository="nexus::default::https://nexus.i-run.fr/repository/snapshots/" \
+      -DaltSnapshotDeploymentRepository="nexus" \
+      -DaltReleaseDeploymentRepository="ossrh"
   rules:
     - if: >
         $CI_COMMIT_REF_NAME == "develop"
-        || $CI_COMMIT_REF_NAME == "master"
       when: always
 
 ⚙trigger:unchained:
@@ -154,24 +163,3 @@ maven:deploy:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "develop"'
       when: on_success
-
-📣mattermost:failure:
-  stage: notify
-  allow_failure: true
-  variables:
-    GIT_STRATEGY: none
-  script:
-    - |
-      curl --header "PRIVATE-TOKEN: ${BRIGIT_ACCESS_TOKEN}"\
-        -s -o "./parse_pipeline_error.sh"\
-        "https://gitlab.i-run.fr/api/v4/projects/${CI_PROJECT_ID}\
-        /repository/files/.gitlab%2Fscripts%2Fparse_pipeline_error.sh/raw?ref=${CI_COMMIT_REF_NAME}"
-    - chmod +x ./parse_pipeline_error.sh
-    - export JOB_ERROR=$(./parse_pipeline_error.sh
-        -p "${CI_PROJECT_ID}" -P "${CI_PIPELINE_ID}" -t "${BRIGIT_ACCESS_TOKEN}")
-    - curl -s -o "./user-mapping.sh" "https://gitlab.i-run.fr/share/snippet/snippets/9/raw"
-    - curl -s -o "./feature-fail-v2.sh" "https://gitlab.i-run.fr/share/snippet/snippets/20/raw"
-    - source "./user-mapping.sh" && chmod +x ./feature-fail-v2.sh
-    - CHANNEL="info-gitlab" ./feature-fail-v2.sh
-    - CHANNEL="@${USERS[$GITLAB_USER_LOGIN]:-$GITLAB_USER_LOGIN}" ./feature-fail-v2.sh
-  when: on_failure
