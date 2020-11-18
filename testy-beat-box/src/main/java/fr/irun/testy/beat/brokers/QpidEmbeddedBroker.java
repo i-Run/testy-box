@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.apache.qpid.server.SystemLauncher;
+import org.apache.qpid.server.model.SystemConfig;
 
 import java.io.IOException;
 import java.net.URL;
@@ -83,8 +84,8 @@ public final class QpidEmbeddedBroker implements EmbeddedBroker {
 
         return ImmutableMap.<String, Object>builder()
                 .put("type", "Memory")
-                .put("initialConfigurationLocation", initialConfig.toExternalForm())
-                .put("startupLoggedToSystemOut", true)
+                .put(SystemConfig.INITIAL_CONFIGURATION_LOCATION, initialConfig.toExternalForm())
+                .put(SystemConfig.STARTUP_LOGGED_TO_SYSTEM_OUT, false)
                 .build();
     }
 
