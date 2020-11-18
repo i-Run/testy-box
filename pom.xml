@@ -4,39 +4,34 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>rocket-parent</artifactId>
-        <version>4</version>
+        <version>7-SNAPSHOT</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
-    <version>1.1.3</version>
+    <version>1.2.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <scm>
         <connection>scm:git:git@gitlab.i-run.fr:nora/rocket/testy-box.git</connection>
         <developerConnection>scm:git:git@gitlab.i-run.fr:nora/rocket/testy-box.git</developerConnection>
         <url>https://gitlab.i-run.fr/nora/rocket/testy-box</url>
-      <tag>1.1.3</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <modules>
         <module>testy-mongo-box</module>
         <module>testy-core-box</module>
         <module>testy-jooq-box</module>
+        <module>testy-beat-box</module>
     </modules>
 
     <properties>
         <flapdoodle.version>2.1.1</flapdoodle.version>
         <javax.inject.version>1</javax.inject.version>
+        <qpid.version>7.1.7</qpid.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter-api</artifactId>
-                <version>${junit-jupiter.version}</version>
-                <scope>compile</scope>
-            </dependency>
-
             <dependency>
                 <groupId>de.flapdoodle.embed</groupId>
                 <artifactId>de.flapdoodle.embed.mongo</artifactId>
@@ -47,6 +42,30 @@
                 <artifactId>javax.inject</artifactId>
                 <version>${javax.inject.version}</version>
             </dependency>
+
+            <!-- AMQP protocol support is modular. Here we show support for 0-8/0-9 and 1.0. Support for 0-10 is excluded. -->
+            <dependency>
+                <groupId>org.apache.qpid</groupId>
+                <artifactId>qpid-broker-core</artifactId>
+                <version>${qpid.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.qpid</groupId>
+                <artifactId>qpid-broker-plugins-amqp-0-8-protocol</artifactId>
+                <version>${qpid.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.qpid</groupId>
+                <artifactId>qpid-broker-plugins-amqp-1-0-protocol</artifactId>
+                <version>${qpid.version}</version>
+            </dependency>
+            <!-- If a different store type is required it needs to be included here -->
+            <dependency>
+                <groupId>org.apache.qpid</groupId>
+                <artifactId>qpid-broker-plugins-memory-store</artifactId>
+                <version>${qpid.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 </project>

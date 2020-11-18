@@ -23,7 +23,7 @@ class WithObjectMapperTest {
         void should_inject_object_mapper(ObjectMapper tested) {
             assertThat(tested.getRegisteredModuleIds()).containsOnly(
                     "com.fasterxml.jackson.datatype.guava.GuavaModule",
-                    "com.fasterxml.jackson.datatype.jsr310.JSR310Module",
+                    "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
                     "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
                     "com.fasterxml.jackson.module.paramnames.ParameterNamesModule"
             );

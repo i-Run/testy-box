@@ -1,36 +1,35 @@
 package fr.irun.testy.mongo;
 
 import com.google.common.collect.ImmutableMap;
-import com.mongodb.reactivestreams.client.MongoClient;
-import com.mongodb.reactivestreams.client.Success;
-import fr.irun.testy.mongo.MongoDatabaseName;
-import fr.irun.testy.mongo.WithEmbeddedMongo;
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
+
 
 class WithEmbeddedMongoBuilderTest {
 
+    private static final String DATABASE = "dummy";
+
     @RegisterExtension
+    @SuppressWarnings("unused")
     static WithEmbeddedMongo wMongo = WithEmbeddedMongo.builder()
-            .setDatabaseName("dummy")
+            .setDatabaseName(DATABASE)
             .build();
 
     @Test
-    void should_extend_with_embedded_mongo(MongoClient tested, @MongoDatabaseName String dbName) {
-        assertNotNull(tested);
-        assertNotNull(dbName);
+    void should_extend_with_embedded_mongo(ReactiveMongoTemplate tested, @MongoDatabaseName String dbName) {
+        assertThat(tested).isNotNull();
+        assertThat(dbName).isEqualTo(DATABASE);
 
-        Publisher<Success> publisher = tested.getDatabase(dbName).getCollection("dummy")
-                .insertOne(new Document(ImmutableMap.of(
-                        "foo", "oof",
-                        "bar", "rab"
-                )));
-        Success actual = Mono.from(publisher).block();
-        assertNotNull(actual);
+        final Document toInsert = new Document(ImmutableMap.of(
+                "foo", "oof",
+                "bar", "rab"
+        ));
+
+        final Document inserted = tested.insert(toInsert, "dummy").block();
+        assertThat(inserted).isEqualTo(toInsert);
     }
 }

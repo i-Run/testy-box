@@ -1,47 +1,66 @@
-image: d.i-run.fr/irun-compiler:20190212.ad9ab9c2
+---
+image: d.i-run.fr/irun-compiler:jdk8-20200930.a479ebca
 
 variables:
-  #CHAT_WEBHOOK_URL: Must exists in group variables or projet variables
-  #GIT_SUBMODULE_STRATEGY: normal
+  # CHAT_WEBHOOK_URL: Must exists in group variables or projet variables
+  # GIT_SUBMODULE_STRATEGY: normal
   # As of Maven 3.3.0 instead of this you may define these options in `.mvn/maven.config` so the same config is used
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
-  MAVEN_CLI_OPTS: "--batch-mode -Dmaven.repo.local=${CI_PROJECT_DIR}/.m2/repository --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
+  MAVEN_CLI_OPTS:
+    "--batch-mode -Dmaven.repo.local=${CI_PROJECT_DIR}/.m2/repository
+      --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
+  GIT_SSH_COMMAND: "ssh -i ${CI_PROJECT_DIR}/git_ssh_private_key"
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
   paths:
-  - ${CI_PROJECT_DIR}/.m2/repository/
+    - ${CI_PROJECT_DIR}/.m2/repository/
 
 stages:
-- build
-- test
-- release
-- deploy
-- notify
+  - build
+  - test
+  - release
+  - deploy
+  - notify
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - when: always
+
+before_script:
+  - cat "${GIT_SSH_PRIVATE_KEY}" > "${CI_PROJECT_DIR}/git_ssh_private_key"
+  - chmod 600 "${CI_PROJECT_DIR}/git_ssh_private_key"
+
+shell-check:
+  stage: test
+  script:
+    - shellcheck .gitlab/*.sh
+    - shellcheck .gitlab/scripts/*.sh
 
 maven:build:
   stage: build
-  before_script:
-    - find "${CI_PROJECT_DIR}/.m2/repository" -type f -name "*SNAPSHOT*" -delete || true
-    - .gitlab/install-deps.sh
   script:
+    - find "${CI_PROJECT_DIR}/.m2/repository" -type f -name "*SNAPSHOT*" -delete || true
+    - .gitlab/install-deps.sh -c $CI_COMMIT_REF_NAME
     - mvn ${MAVEN_CLI_OPTS} clean install -DskipTests
   artifacts:
     when: on_success
     expire_in: 1 hour
     untracked: true
 
-maven:checkstyle:
+🖍maven:checkstyle:
   stage: test
   dependencies:
-  - maven:build
+    - maven:build
   cache:
     policy: pull
   script:
-  - mvn ${MAVEN_CLI_OPTS} install checkstyle:check -DskipTests
+    - mvn ${MAVEN_CLI_OPTS} install checkstyle:check -DskipTests
 
-maven:javadoc:
+📚maven:javadoc:
   stage: test
   dependencies:
     - maven:build
@@ -49,11 +68,11 @@ maven:javadoc:
     policy: pull
   script:
     - mvn ${MAVEN_CLI_OPTS} javadoc:javadoc
-    
+
 maven:test:
   stage: test
   dependencies:
-  - maven:build
+    - maven:build
   script: mvn ${MAVEN_CLI_OPTS} test -Pintegration
   artifacts:
     reports:
@@ -63,31 +82,45 @@ maven:test:
         testy-mongo-box/target/surefire-reports/TEST-*.xml
       ]
 
+🖍yaml:lint:
+  stage: test
+  image: python:3-slim
+  before_script:
+    - export PATH="$PATH:~/.local/bin"
+    - pip install --user yamllint
+  script:
+    - yamllint --strict .
+
 maven:release:
   stage: release
   dependencies:
-  - maven:build
-  before_script:
+    - maven:build
+  script:
     - git checkout -B "$CI_BUILD_REF_NAME"
     - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
     - git clean -f
-  script: 
     - |
       mvn ${MAVEN_CLI_OPTS} \
         release:prepare \
           -DtagNameFormat="@{version}" \
           -DupdateDependencies=false \
           -DscmCommentPrefix="[maven-release][skip CI] " \
+          -DdevelopmentVersion="$(.gitlab/bumpVersion.sh)" \
         release:perform \
           -Darguments="-DskipTests=true -Dmaven.javadoc.skip=true"
     - git clone "git@gitlab.i-run.fr:${CI_PROJECT_PATH}.git"
     - cd "${CI_PROJECT_NAME}"
     - git checkout master
-    - git merge --no-ff -m "[maven-release][skip CI] Merge release in master" origin/develop~1
+    - |
+      git merge --no-ff \
+        -m "[maven-release][skip CI] Merge release in master" origin/develop~1
     - git push origin master
-  when: manual
-  only:
-    - develop
+  rules:
+    - if: >
+        $CI_COMMIT_REF_NAME == "develop"
+        || $CI_COMMIT_REF_NAME =~ /^support/
+      when: manual
+      allow_failure: true
 
 maven:sonar:
   stage: deploy
@@ -98,36 +131,47 @@ maven:sonar:
     policy: pull
   script:
     - mvn ${MAVEN_CLI_OPTS} test sonar:sonar -Psonar
-  only:
-    - develop
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "develop"'
+      when: always
 
 maven:deploy:
   stage: deploy
   dependencies:
     - maven:build
   script: mvn ${MAVEN_CLI_OPTS} deploy -DskipTests
-  only:
-    - develop
-    - master
+  rules:
+    - if: >
+        $CI_COMMIT_REF_NAME == "develop"
+        || $CI_COMMIT_REF_NAME == "master"
+      when: always
 
-documentation:deploy:
+⚙trigger:unchained:
   stage: notify
-  allow_failure: true
-  cache: {}
-  script: 
-    - curl --request POST --form "token=${CI_JOB_TOKEN}" --form ref=develop "${CI_API_V4_URL}/projects/149/trigger/pipeline"
-  only:
-    - develop
+  trigger:
+    project: nora/rocket/unchained
+    branch: develop
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "develop"'
+      when: on_success
 
-mattermost:failure:
+📣mattermost:failure:
   stage: notify
   allow_failure: true
   variables:
     GIT_STRATEGY: none
   script:
+    - |
+      curl --header "PRIVATE-TOKEN: ${BRIGIT_ACCESS_TOKEN}"\
+        -s -o "./parse_pipeline_error.sh"\
+        "https://gitlab.i-run.fr/api/v4/projects/${CI_PROJECT_ID}\
+        /repository/files/.gitlab%2Fscripts%2Fparse_pipeline_error.sh/raw?ref=${CI_COMMIT_REF_NAME}"
+    - chmod +x ./parse_pipeline_error.sh
+    - export JOB_ERROR=$(./parse_pipeline_error.sh
+        -p "${CI_PROJECT_ID}" -P "${CI_PIPELINE_ID}" -t "${BRIGIT_ACCESS_TOKEN}")
     - curl -s -o "./user-mapping.sh" "https://gitlab.i-run.fr/share/snippet/snippets/9/raw"
-    - curl -s -o "./feature-fail.sh" "https://gitlab.i-run.fr/share/snippet/snippets/8/raw"
-    - source "./user-mapping.sh" && chmod +x ./feature-fail.sh
-    - CHANNEL="info-gitlab" ./feature-fail.sh
-    - CHANNEL="@${USERS[$GITLAB_USER_LOGIN]:-$GITLAB_USER_LOGIN}" ./feature-fail.sh
+    - curl -s -o "./feature-fail-v2.sh" "https://gitlab.i-run.fr/share/snippet/snippets/20/raw"
+    - source "./user-mapping.sh" && chmod +x ./feature-fail-v2.sh
+    - CHANNEL="info-gitlab" ./feature-fail-v2.sh
+    - CHANNEL="@${USERS[$GITLAB_USER_LOGIN]:-$GITLAB_USER_LOGIN}" ./feature-fail-v2.sh
   when: on_failure

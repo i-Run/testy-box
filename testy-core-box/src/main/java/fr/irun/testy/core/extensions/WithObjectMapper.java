@@ -45,6 +45,10 @@ public class WithObjectMapper implements BeforeAllCallback, BeforeEachCallback, 
         this.findAndRegisterModules = findAndRegisterModules;
     }
 
+    public static WithObjectMapperBuilder builder() {
+        return new WithObjectMapperBuilder();
+    }
+
     @Override
     public void beforeAll(ExtensionContext context) {
         ObjectMapper mapper = new ObjectMapper();
@@ -91,10 +95,6 @@ public class WithObjectMapper implements BeforeAllCallback, BeforeEachCallback, 
 
     private Store getStore(ExtensionContext context) {
         return context.getStore(ExtensionContext.Namespace.create(getClass()));
-    }
-
-    public static WithObjectMapperBuilder builder() {
-        return new WithObjectMapperBuilder();
     }
 
     /**
