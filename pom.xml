@@ -159,6 +159,13 @@
                                     <goal>jar</goal>
                                 </goals>
                             </execution>
+                            <execution>
+                                <id>javadoc-generate</id>
+                                <goals>
+                                    <goal>resource-bundle</goal>
+                                </goals>
+                                <phase>none</phase>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
