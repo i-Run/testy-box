@@ -16,27 +16,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WithMultipleDataSourcesTest {
     private static final String NORA_CATALOG = "dummy_nora";
     private static final String LEGACY_CATALOG = "dummy_legacy";
-    private static final String SQL_SELECT_ALL_JEDIS = "SELECT FIRST_NAME, LAST_NAME FROM JEDI";
+    private static final String SQL_SELECT_ALL_GUNGANS = "SELECT FIRST_NAME, LAST_NAME FROM GUNGAN";
+    private static final String SQL_SELECT_ALL_MASTERS = "SELECT FIRST_NAME, LAST_NAME FROM MASTER";
 
-    private static WithInMemoryDatasource wLegacyDatasource = WithInMemoryDatasource.builder()
+    private final static WithInMemoryDatasource wLegacyDatasource = WithInMemoryDatasource.builder()
             .setCatalog(LEGACY_CATALOG)
             .setReferentialIntegrity(false)
             .build();
-    private static WithDatabaseLoaded wLegacyDatabase = WithDatabaseLoaded.builder()
+    private final static WithDatabaseLoaded wLegacyDatabase = WithDatabaseLoaded.builder()
             .setDatasourceExtension(wLegacyDatasource)
             .build();
-    private static WithDslContext wLegacyContext = WithDslContext.builder()
+    private final static WithDslContext wLegacyContext = WithDslContext.builder()
             .setDatasourceExtension(wLegacyDatasource)
             .setDialect(SQLDialect.H2)
             .build();
 
-    private static WithInMemoryDatasource wNoraDatasource = WithInMemoryDatasource.builder()
+    private final static WithInMemoryDatasource wNoraDatasource = WithInMemoryDatasource.builder()
             .setCatalog(NORA_CATALOG)
             .build();
-    private static WithDatabaseLoaded wNoraDatabase = WithDatabaseLoaded.builder()
+    private final static WithDatabaseLoaded wNoraDatabase = WithDatabaseLoaded.builder()
             .setDatasourceExtension(wNoraDatasource)
             .build();
-    private static WithDslContext wNoraContext = WithDslContext.builder()
+    private final static WithDslContext wNoraContext = WithDslContext.builder()
             .setDatasourceExtension(wNoraDatasource)
             .setDialect(SQLDialect.H2)
             .build();
@@ -63,15 +64,15 @@ class WithMultipleDataSourcesTest {
         // Check data
         assertThat(legacyContext).isNotNull();
 
-        final Result<Record> actualLegacyResult = legacyContext.fetch(SQL_SELECT_ALL_JEDIS);
+        final Result<Record> actualLegacyResult = legacyContext.fetch(SQL_SELECT_ALL_GUNGANS);
         assertThat(actualLegacyResult).isNotNull();
         assertThat(actualLegacyResult).isNotEmpty();
         assertThat(actualLegacyResult).hasSize(1);
 
         final Record actualLegacyRecord = actualLegacyResult.get(0);
         assertThat(actualLegacyRecord).isNotNull();
-        assertThat(actualLegacyRecord.get(0)).isEqualTo("Dark");
-        assertThat(actualLegacyRecord.get(1)).isEqualTo("Vador");
+        assertThat(actualLegacyRecord.get(0)).isEqualTo("Jar Jar");
+        assertThat(actualLegacyRecord.get(1)).isEqualTo("Binks");
     }
 
     @Test
@@ -84,7 +85,7 @@ class WithMultipleDataSourcesTest {
         // Check data
         assertThat(noraContext).isNotNull();
 
-        final Result<Record> actualNoraResult = noraContext.fetch(SQL_SELECT_ALL_JEDIS);
+        final Result<Record> actualNoraResult = noraContext.fetch(SQL_SELECT_ALL_MASTERS);
         assertThat(actualNoraResult).isNotNull();
         assertThat(actualNoraResult).isNotEmpty();
         assertThat(actualNoraResult).hasSize(1);
@@ -107,15 +108,15 @@ class WithMultipleDataSourcesTest {
         // Check legacy data
         assertThat(legacyContext).isNotNull();
 
-        final Result<Record> actualLegacyResult = legacyContext.fetch(SQL_SELECT_ALL_JEDIS);
+        final Result<Record> actualLegacyResult = legacyContext.fetch(SQL_SELECT_ALL_GUNGANS);
         assertThat(actualLegacyResult).isNotNull();
         assertThat(actualLegacyResult).isNotEmpty();
         assertThat(actualLegacyResult).hasSize(1);
 
         final Record actualLegacyRecord = actualLegacyResult.get(0);
         assertThat(actualLegacyRecord).isNotNull();
-        assertThat(actualLegacyRecord.get(0)).isEqualTo("Dark");
-        assertThat(actualLegacyRecord.get(1)).isEqualTo("Vador");
+        assertThat(actualLegacyRecord.get(0)).isEqualTo("Jar Jar");
+        assertThat(actualLegacyRecord.get(1)).isEqualTo("Binks");
 
         // Check nora catalog
         assertThat(noraCatalog).isEqualTo(NORA_CATALOG);
@@ -123,7 +124,7 @@ class WithMultipleDataSourcesTest {
         // Check nora data
         assertThat(noraContext).isNotNull();
 
-        final Result<Record> actualNoraResult = noraContext.fetch(SQL_SELECT_ALL_JEDIS);
+        final Result<Record> actualNoraResult = noraContext.fetch(SQL_SELECT_ALL_MASTERS);
         assertThat(actualNoraResult).isNotNull();
         assertThat(actualNoraResult).isNotEmpty();
         assertThat(actualNoraResult).hasSize(1);
