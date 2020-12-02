@@ -2,7 +2,7 @@ package fr.irun.testy.jooq;
 
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
-import org.jooq.conf.RenderNameStyle;
+import org.jooq.conf.RenderNameCase;
 import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -27,7 +27,7 @@ import java.util.Objects;
  *     {@literal @}RegisterExtension
  *     static WithDslContext wDslContext = WithDslContext.builder()
  *             .setDatasourceExtension(wDs)
- *             .setDialect(SQLDialect.MYSQL_5_7)
+ *             .setDialect(SQLDialect.MYSQL)
  *             .build();
  * </code></pre>
  * <p>
@@ -52,7 +52,7 @@ public final class WithDslContext implements BeforeAllCallback, ParameterResolve
         DataSource ds = Objects.requireNonNull(wDs.getDataSource(context), "Datasource not found in Store !");
 
         Settings settings = new Settings();
-        settings.setRenderNameStyle(RenderNameStyle.UPPER);
+        settings.setRenderNameCase(RenderNameCase.UPPER);
         settings.setRenderSchema(false);
 
         DSLContext dslContext = DSL.using(ds, dialect, settings);

@@ -16,14 +16,14 @@ class WithDslContextTest {
     @RegisterExtension
     static WithDslContext wDslContext = WithDslContext.builder()
             .setDatasourceExtension(wDs)
-            .setDialect(SQLDialect.MYSQL_5_7)
+            .setDialect(SQLDialect.MYSQL)
             .build();
 
     @Test
     void should_get_dsl_context(DSLContext tested) {
         assertThat(tested).isNotNull();
         Configuration configuration = tested.configuration();
-        assertThat(configuration.dialect()).isEqualTo(SQLDialect.MYSQL_5_7);
+        assertThat(configuration.dialect()).isEqualTo(SQLDialect.MYSQL);
 
         int actual = tested.selectOne().execute();
         assertThat(actual).isEqualTo(1);
