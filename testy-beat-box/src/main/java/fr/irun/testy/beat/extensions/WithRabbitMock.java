@@ -44,7 +44,7 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     <li>Can declare many queues with related exchanges</li>
  *     <li>Builds a {@link MockedSender} and a {@link MockedReceiver} to simplify the mocking of the queues.</li>
  * </ul>
- * <p>
+ * <br>
  * Usage :
  * <pre style="code">
  *     private static final String QUEUE_1 = "test-queue-1";
@@ -66,7 +66,7 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *             .append(withRabbit)
  *             .register();
  * </pre>
- * <p>
+ * <br>
  * Example to test a "listener" class.
  * A "listener" is expected to:
  * <ul>
@@ -76,7 +76,7 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     <li>Reply another message on the reply queue</li>
  *     <li>The {@link MockedSender} can be used to simplify the sending of messages on a queue.</li>
  * </ul>
- * <p>
+ * <br>
  * <pre style="code">
  *     {@literal @}Test
  *     void should_consume_queue_and_reply_message(MockedSender mockedSender, ObjectMapper objectMapper) {
@@ -92,21 +92,21 @@ import static fr.irun.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *          assertThat(actualResponse).isEqualTo("expected message replied by tested listener");
  *      }
  * </pre>
- * <p>
+ * <br>
  * Assert example to test an "emitter" class.
  * An "emitter" is expected to:
  * <ul>
  *     <li>Send a message on the queue/exchange</li>
  *     <li>Treat the response.</li>
  * </ul>
- * <p>
+ * <br>
  * Note that:
  * <ul>
  *     <li>An {@link MockedReceiver} can be injected to the test.</li>
  *     <li>It can consume a defined number of messages on a queue and reply defined responses.</li>
  *     <li>The method {@link MockedReceiver.MockedConsumerBuilder#start()} returns all the requests consumed from the queue.</li>
  * </ul>
- * <p>
+ * <br>
  * <pre style="code">
  *     {@literal @}Test
  *     void should_emit_message_and_manage_response(MockedReceiver mockedReceiver,

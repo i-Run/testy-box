@@ -130,7 +130,7 @@ void setUp(@Named("my_catalog_1") DataSource dataSource1,
 
 This extension depends on a [DatasourceExtension](https://rocket.i-run.si/javadoc/fr/irun/testy/jooq/DatasourceExtension.html) and runs a [Flyway](https://flywaydb.org/) migration on the related DB catalog.
 
-The SQL scripts shall be located into `db.migration.<catalog>` in the classpath, where `<catalog>` is the name of DataSource catalog. The names of the SQL files shall match [Flyway naming convention](https://flywaydb.org/documentation/migrations#naming).
+By default, the SQL scripts have to be located  into `db.migration.<catalog>` in the classpath, where `<catalog>` is the name of DataSource catalog. The names of the SQL files shall match [Flyway naming convention](https://flywaydb.org/documentation/migrations#naming).
 
 The SQL scripts are run **before all the test methods**. They are expected to be used to create the database schema.
 
