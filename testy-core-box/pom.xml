@@ -4,7 +4,7 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>testy-box</artifactId>
-        <version>1.4.0-SNAPSHOP</version>
+        <version>1.4.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>testy-core-box</artifactId>
