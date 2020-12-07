@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>testy-box</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>1.4.0-SNAPSHOP</version>
     <packaging>pom</packaging>
 
     <name>Testy Box</name>
