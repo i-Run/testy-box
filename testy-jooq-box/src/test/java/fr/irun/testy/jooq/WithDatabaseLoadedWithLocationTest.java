@@ -13,14 +13,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class WithDatabaseLoadedTest {
+class WithDatabaseLoadedWithLocationTest {
     @RegisterExtension
     static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder()
             .setCatalog("dummy").build();
-
-    @RegisterExtension
-    static WithDatabaseLoaded wDbLoaded = WithDatabaseLoaded.builder()
-            .setDatasourceExtension(wDs).build();
 
     @RegisterExtension
     static WithDatabaseLoaded wDbLoadedLocation = WithDatabaseLoaded.builder()
@@ -32,7 +28,7 @@ class WithDatabaseLoadedTest {
         List<String> actuals = new ArrayList<>();
         try (Connection conn = ds.getConnection();
              Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("SELECT * FROM JEDI");
+            ResultSet rs = stmt.executeQuery("SELECT * FROM GUNGAN");
 
             while (rs.next()) {
                 actuals.add(rs.getString(1) + " " + rs.getString(2));
@@ -40,6 +36,6 @@ class WithDatabaseLoadedTest {
             rs.close();
         }
 
-        assertThat(actuals).contains("Obiwan Kenobi", "Dark Vador");
+        assertThat(actuals).contains("Jar Jar Binks");
     }
 }

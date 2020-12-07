@@ -13,19 +13,15 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class WithDatabaseLoadedTest {
+class WithDatabaseLoadedWithoutCatalogTest {
     @RegisterExtension
-    static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder()
-            .setCatalog("dummy").build();
+    static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder().build();
 
     @RegisterExtension
     static WithDatabaseLoaded wDbLoaded = WithDatabaseLoaded.builder()
-            .setDatasourceExtension(wDs).build();
-
-    @RegisterExtension
-    static WithDatabaseLoaded wDbLoadedLocation = WithDatabaseLoaded.builder()
-            .setMigrationsLocation("db/migration/dummy_legacy")
-            .setDatasourceExtension(wDs).build();
+            .setDatasourceExtension(wDs)
+            .useFlywayDefaultLocation()
+            .build();
 
     @Test
     void should_get_data_form_loaded_db(DataSource ds) throws SQLException {
