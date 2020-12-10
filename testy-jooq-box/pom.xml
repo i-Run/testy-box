@@ -9,6 +9,8 @@
 
     <artifactId>testy-jooq-box</artifactId>
 
+    <name>Testy jOOQ Box</name>
+
     <dependencies>
         <dependency>
             <groupId>fr.irun</groupId>

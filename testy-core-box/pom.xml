@@ -9,6 +9,8 @@
 
     <artifactId>testy-core-box</artifactId>
 
+    <name>Testy Core Box</name>
+
     <dependencies>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

@@ -9,6 +9,8 @@
 
     <artifactId>testy-mongo-box</artifactId>
 
+    <name>Testy Mongo Box</name>
+
     <dependencies>
         <dependency>
             <groupId>fr.irun</groupId>
