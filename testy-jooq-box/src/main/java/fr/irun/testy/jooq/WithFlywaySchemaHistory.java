@@ -23,7 +23,6 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import javax.sql.DataSource;
 import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -103,7 +102,7 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
         final FlywayTable flywayTable = getFlywayTable(extensionContext);
 
         dslContext.dropTableIfExists(flywayTable).execute();
-        dslContext.createTable(flywayTable).columns(flywayTable.getFields()).execute();
+        dslContext.createTable(flywayTable).columns(flywayTable.allFields).execute();
     }
 
     @Override
@@ -117,7 +116,7 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
 
         final AtomicInteger installedRank = new AtomicInteger();
         final InsertValuesStepN<Record> query = dslContext.insertInto(flywayTable)
-                .columns(flywayTable.getFields());
+                .columns(flywayTable.allFields);
         versions.stream()
                 .map(version -> Arrays.asList(installedRank.addAndGet(1),
                         version.version,
@@ -222,16 +221,29 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
         private static final int SCRIPT_SIZE = 1000;
         private static final int INSTALLED_BY_SIZE = 100;
 
-        final TableField<Record, Integer> installedRank = createField("installed_rank", SQLDataType.INTEGER, this, "");
-        final TableField<Record, String> version = createField("version", SQLDataType.VARCHAR(VERSION_SIZE).nullable(false), this, "");
-        final TableField<Record, String> description = createField("description", SQLDataType.VARCHAR(DESCRIPTION_SIZE), this, "");
-        final TableField<Record, String> type = createField("type", SQLDataType.VARCHAR(TYPE_SIZE), this, "");
-        final TableField<Record, String> script = createField("script", SQLDataType.VARCHAR(SCRIPT_SIZE), this, "");
-        final TableField<Record, Integer> checksum = createField("checksum", SQLDataType.INTEGER, this, "");
-        final TableField<Record, String> installedBy = createField("installed_by", SQLDataType.VARCHAR(INSTALLED_BY_SIZE), this, "");
-        final TableField<Record, Timestamp> installedOn = createField("installed_on", SQLDataType.TIMESTAMP.precision(6), this, "");
-        final TableField<Record, Integer> executionTime = createField("execution_time", SQLDataType.INTEGER, this, "");
-        final TableField<Record, Boolean> success = createField("success", SQLDataType.BOOLEAN, this, "");
+        final TableField<Record, Integer> installedRank = createField(DSL.name("installed_rank"), SQLDataType.INTEGER, this, "");
+        final TableField<Record, String> version = createField(DSL.name("version"), SQLDataType.VARCHAR(VERSION_SIZE).nullable(false), this, "");
+        final TableField<Record, String> description = createField(DSL.name("description"), SQLDataType.VARCHAR(DESCRIPTION_SIZE), this, "");
+        final TableField<Record, String> type = createField(DSL.name("type"), SQLDataType.VARCHAR(TYPE_SIZE), this, "");
+        final TableField<Record, String> script = createField(DSL.name("script"), SQLDataType.VARCHAR(SCRIPT_SIZE), this, "");
+        final TableField<Record, Integer> checksum = createField(DSL.name("checksum"), SQLDataType.INTEGER, this, "");
+        final TableField<Record, String> installedBy = createField(DSL.name("installed_by"), SQLDataType.VARCHAR(INSTALLED_BY_SIZE), this, "");
+        final TableField<Record, Timestamp> installedOn = createField(DSL.name("installed_on"), SQLDataType.TIMESTAMP.precision(6), this, "");
+        final TableField<Record, Integer> executionTime = createField(DSL.name("execution_time"), SQLDataType.INTEGER, this, "");
+        final TableField<Record, Boolean> success = createField(DSL.name("success"), SQLDataType.BOOLEAN, this, "");
+
+        private final ImmutableList<Field<?>> allFields = ImmutableList.of(
+                installedRank,
+                version,
+                description,
+                type,
+                script,
+                checksum,
+                installedBy,
+                installedOn,
+                executionTime,
+                success
+        );
 
         private final AtomicInteger currentRank = new AtomicInteger(0);
 
@@ -241,22 +253,7 @@ public final class WithFlywaySchemaHistory implements BeforeAllCallback, BeforeE
 
         @Override
         public UniqueKey<Record> getPrimaryKey() {
-            return Internal.createUniqueKey(this, "flyway_pk", installedRank);
-        }
-
-        Collection<Field<?>> getFields() {
-            return ImmutableList.of(
-                    installedRank,
-                    version,
-                    description,
-                    type,
-                    script,
-                    checksum,
-                    installedBy,
-                    installedOn,
-                    executionTime,
-                    success
-            );
+            return Internal.createUniqueKey(this, DSL.name("flyway_pk"), installedRank);
         }
 
     }

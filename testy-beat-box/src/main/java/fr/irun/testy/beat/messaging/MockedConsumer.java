@@ -7,9 +7,8 @@ import com.rabbitmq.client.Delivery;
 import com.rabbitmq.client.Envelope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Sinks;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -28,8 +27,7 @@ final class MockedConsumer extends DefaultConsumer {
     private final AtomicInteger remainingRequests;
     private final AtomicReference<AmqpMessage> currentResponse = new AtomicReference<>();
 
-    private final EmitterProcessor<Delivery> requests = EmitterProcessor.create();
-    private final FluxSink<Delivery> requestsSink = requests.sink();
+    private final Sinks.Many<Delivery> requests = Sinks.many().multicast().onBackpressureBuffer();
 
     /**
      * Constructor.
@@ -52,7 +50,7 @@ final class MockedConsumer extends DefaultConsumer {
      * @return All the requests received by the consumer.
      */
     Flux<Delivery> getReceivedRequests() {
-        return requests;
+        return requests.asFlux();
     }
 
     @Override
@@ -66,7 +64,7 @@ final class MockedConsumer extends DefaultConsumer {
 
             final int remaining = remainingRequests.decrementAndGet();
             if (remaining >= 0) {
-                requestsSink.next(new Delivery(envelope, properties, body));
+                requests.tryEmitNext(new Delivery(envelope, properties, body));
                 if (canReply(properties)) {
                     replyToMessage(properties);
                 }
@@ -74,10 +72,10 @@ final class MockedConsumer extends DefaultConsumer {
             if (remaining <= 0) {
                 LOGGER.debug("Stop consumer with tag '{}'", consumerTag);
                 getChannel().basicCancel(consumerTag);
-                requestsSink.complete();
+                requests.tryEmitComplete();
             }
         } catch (IOException ex) {
-            requestsSink.error(ex);
+            requests.tryEmitError(ex);
             throw ex;
         }
     }

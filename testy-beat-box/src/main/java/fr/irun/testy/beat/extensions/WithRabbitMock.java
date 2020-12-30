@@ -137,7 +137,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     private static final String P_MOCKED_RECEIVER_PREFIX = "rabbit-mocked-receiver";
     private static final String P_MOCKED_SENDER_PREFIX = "rabbit-mocked-sender";
 
-    private static final Scheduler SCHEDULER = Schedulers.elastic();
+    private static final Scheduler SCHEDULER = Schedulers.boundedElastic();
 
     private final EmbeddedBroker embeddedBroker;
     private final Map<String, String> queuesAndExchanges;
