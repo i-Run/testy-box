@@ -86,10 +86,7 @@ maven:test:
 
 🖍yaml:lint:
   stage: test
-  image: python:3-slim
-  before_script:
-    - export PATH="$PATH:~/.local/bin"
-    - pip install --user yamllint
+  image: d.i-run.fr/irun-python-tester:20210526.d703e66a
   script:
     - yamllint --strict .
 
