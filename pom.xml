@@ -5,7 +5,7 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>rocket-parent</artifactId>
-        <version>8</version>
+        <version>9-SNAPSHOT</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
