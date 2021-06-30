@@ -5,7 +5,7 @@
     <parent>
         <groupId>fr.irun</groupId>
         <artifactId>rocket-parent</artifactId>
-        <version>9-SNAPSHOT</version>
+        <version>9</version>
     </parent>
 
     <artifactId>testy-box</artifactId>
@@ -17,7 +17,7 @@
     <url>https://github.com/i-Run/testy-box</url>
     <licenses>
         <license>
-            <name>MIT License</name>
+            <name>MIT License</name>    
             <url>https://opensource.org/licenses/MIT</url>
         </license>
     </licenses>
@@ -208,8 +208,20 @@
 
     <developers>
         <developer>
+            <id>fcombes</id>
+            <name>Frédéric Combes</name>
+            <organization>i-Run</organization>
+            <organizationUrl>https://www.i-run.fr</organizationUrl>
+        </developer>
+        <developer>
             <id>bnwander</id>
             <name>Bertrand Neuenschwander</name>
+            <organization>i-Run</organization>
+            <organizationUrl>https://www.i-run.fr</organizationUrl>
+        </developer>
+        <developer>
+            <id>cdaleas</id>
+            <name>Clément Daleas</name>
             <organization>i-Run</organization>
             <organizationUrl>https://www.i-run.fr</organizationUrl>
         </developer>
@@ -220,8 +232,8 @@
             <organizationUrl>https://www.i-run.fr</organizationUrl>
         </developer>
         <developer>
-            <id>fcombes</id>
-            <name>Frédéric Combes</name>
+            <id>jdasilva</id>
+            <name>Jonathan Da Silva</name>
             <organization>i-Run</organization>
             <organizationUrl>https://www.i-run.fr</organizationUrl>
         </developer>
