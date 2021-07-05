@@ -65,7 +65,6 @@
                     <version>${maven-release-plugin.version}</version>
                     <configuration>
                         <localCheckout>true</localCheckout>
-                        <pushChanges>false</pushChanges>
                         <mavenExecutorId>forked-path</mavenExecutorId>
                         <releaseProfiles>releases</releaseProfiles>
                     </configuration>

@@ -115,7 +115,7 @@ maven:release:
     - git checkout master
     - |
       git merge --no-ff \
-        -m "[maven-release][skip CI] Merge release in master" origin/develop
+        -m "[maven-release][skip CI] Merge release in master" origin/develop~1
     - git push origin master
   rules:
     - if: >
