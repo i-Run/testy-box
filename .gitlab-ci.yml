@@ -54,8 +54,9 @@ maven:build:
 
 🖍maven:checkstyle:
   stage: test
-  dependencies:
-    - maven:build
+  needs:
+    - job: maven:build
+      artifacts: true
   cache:
     policy: pull
   script:
@@ -63,8 +64,9 @@ maven:build:
 
 📚maven:javadoc:
   stage: test
-  dependencies:
-    - maven:build
+  needs:
+    - job: maven:build
+      artifacts: true
   cache:
     policy: pull
   script:
@@ -72,8 +74,9 @@ maven:build:
 
 maven:test:
   stage: test
-  dependencies:
-    - maven:build
+  needs:
+    - job: maven:build
+      artifacts: true
   script: mvn ${MAVEN_CLI_OPTS} test -Pintegration
   artifacts:
     reports:
@@ -94,12 +97,21 @@ maven:release:
   stage: release
   variables:
     PIPELINE_NOTIFY_SUCCESS: "true"
-  dependencies:
-    - maven:build
+  needs:
+    - job: maven:build
+      artifacts: true
   script:
     - echo ${GPG_PASSPHRASE} | gpg --batch --import "${GPG_SECRET_KEY}"
-    - git checkout -B "$CI_BUILD_REF_NAME"
-    - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare
+    - git checkout -B "$CI_COMMIT_REF_NAME"
+    - mvn -DdryRun=true versions:update-properties
+    - mvn ${MAVEN_CLI_OPTS} -DdryRun=true release:prepare \
+      -DtagNameFormat="@{version}" \
+      -DupdateDependencies=false \
+      -DscmCommentPrefix="[maven-release][skip CI] " \
+      -DdevelopmentVersion="$(.gitlab/bumpVersion.sh)" \
+    - git clean -f
+    - mvn versions:update-properties
+    - git commit -a -m "[maven-release][skip CI] Update properties version"
     - git clean -f
     - |
       mvn ${MAVEN_CLI_OPTS} \
@@ -126,8 +138,9 @@ maven:release:
 
 maven:sonar:
   stage: deploy
-  dependencies:
-    - maven:build
+  needs:
+    - job: maven:build
+      artifacts: true
   allow_failure: true
   cache:
     policy: pull
@@ -139,8 +152,11 @@ maven:sonar:
 
 maven:deploy-snapshot:
   stage: deploy
-  dependencies:
-    - maven:build
+  needs:
+    - job: maven:build
+      artifacts: true
+    - job: maven:test
+      artifacts: true
   script: |
     mvn ${MAVEN_CLI_OPTS} deploy \
       -DskipTests \
