@@ -1,5 +1,5 @@
 ---
-image: d.i-run.fr/irun-compiler:jdk8-20200930.a479ebca
+image: d.i-run.fr/irun-compiler:jdk11-20210420.ec649080
 
 variables:
   # CHAT_WEBHOOK_URL: Must exists in group variables or projet variables
