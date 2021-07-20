@@ -20,6 +20,7 @@ import reactor.rabbitmq.RabbitFlux;
 import reactor.rabbitmq.RpcClient;
 import reactor.rabbitmq.Sender;
 import reactor.rabbitmq.SenderOptions;
+import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -27,8 +28,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -80,21 +81,19 @@ class MockedReceiverTest {
     void should_capture_messages_sent_on_queue() {
         final int nbRequests = 5;
 
-        final String[] messages = IntStream.range(0, nbRequests)
-                .mapToObj(i -> "test-message-" + i)
-                .toArray(String[]::new);
+        List<String> messages = IntStream.range(0, nbRequests)
+                .mapToObj(i -> "test-message-" + i).collect(Collectors.toList());
 
         final Flux<Delivery> receivedMessage = tested.consume(nbRequests).on(QUEUE).start();
 
-        Stream.of(messages)
+        messages.stream()
                 .map(s -> new OutboundMessage(EXCHANGE, "", s.getBytes(StandardCharsets.UTF_8)))
                 .forEach(m -> sender.send(Mono.just(m)).block());
 
-        final List<String> actualReceived = receivedMessage
-                .map(d -> new String(d.getBody(), StandardCharsets.UTF_8))
-                .collectList()
-                .block(BLOCK_TIMEOUT);
-        assertThat(actualReceived).containsExactly(messages);
+        StepVerifier.create(receivedMessage)
+                .thenConsumeWhile(delivery -> messages.contains(new String(delivery.getBody(), StandardCharsets.UTF_8)))
+                .expectComplete()
+                .verify(BLOCK_TIMEOUT);
     }
 
     @Test
