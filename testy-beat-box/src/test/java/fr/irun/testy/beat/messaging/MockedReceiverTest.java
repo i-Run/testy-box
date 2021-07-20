@@ -81,7 +81,7 @@ class MockedReceiverTest {
     void should_capture_messages_sent_on_queue() {
         final int nbRequests = 5;
 
-        List<String> messages = IntStream.range(0, nbRequests)
+        final List<String> messages = IntStream.range(0, nbRequests)
                 .mapToObj(i -> "test-message-" + i).collect(Collectors.toList());
 
         final Flux<Delivery> receivedMessage = tested.consume(nbRequests).on(QUEUE).start();
