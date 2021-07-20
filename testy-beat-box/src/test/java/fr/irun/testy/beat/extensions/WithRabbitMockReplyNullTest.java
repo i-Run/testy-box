@@ -1,13 +1,14 @@
 package fr.irun.testy.beat.extensions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.Delivery;
 import fr.irun.testy.beat.messaging.AMQPHelper;
 import fr.irun.testy.beat.messaging.AMQPReceiver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.rabbitmq.SenderOptions;
+import reactor.test.StepVerifier;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static fr.irun.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
@@ -31,11 +32,10 @@ class WithRabbitMockReplyNullTest {
     void should_emit_and_reply_null(SenderOptions senderOptions, AMQPReceiver receiver) {
         receiver.consumeAndReply(null);
 
-        Delivery actualResponse = AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME).block();
-        assertThat(actualResponse).isNotNull();
-
-        final String actualResponseBody = readDeliveryValue(actualResponse, OBJECT_MAPPER, String.class);
-        assertThat(actualResponseBody).isNull();
+        StepVerifier.create(AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME))
+                .expectNextMatches(delivery -> Objects.isNull(readDeliveryValue(delivery, OBJECT_MAPPER, String.class)))
+                .expectComplete()
+                .verify();
 
         final Optional<String> actualMessage = receiver.getNextMessage()
                 .map(d -> readDeliveryValue(d, OBJECT_MAPPER, String.class));
