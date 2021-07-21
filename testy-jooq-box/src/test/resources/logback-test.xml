@@ -9,4 +9,10 @@
     <root level="WARN">
         <appender-ref ref="STDOUT"/>
     </root>
+    <logger name="reactor.Mono" level="info" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    <logger name="reactor.Flux" level="info" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
 </configuration>
