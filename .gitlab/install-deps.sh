@@ -155,8 +155,6 @@ function getDependencies() {
                     -DoutputFile=/dev/stdout -q -f "$prefix" | grep -v INFO | grep -oP "${IRUN_PATTERN}" )" )
     dependencies=( "$(sort -u <<<"${dependencies[*]}")" )
 
-    debug "${dependencies[@]}"
-
     echo "${dependencies[@]}"
 }
 
@@ -166,13 +164,13 @@ function downloadDependenciesParentPom() {
     debug "mvn ${MVN_ARGS[*]} clean dependency:copy-dependencies \
                 -Dmdep.addParentPoms=true \
                 -DincludeGroupIds=${IRUN_GROUP_ID} \
-                -DincludeTypes=pom \
+                -Dmdep.copyPom=true \
                 -f ${prefix}"
 
     debug "$(mvn "${MVN_ARGS[@]}" clean dependency:copy-dependencies \
                 -Dmdep.addParentPoms=true \
                 -DincludeGroupIds="${IRUN_GROUP_ID}" \
-                -DincludeTypes=pom \
+                -Dmdep.copyPom=true \
                 -f "${prefix}")"
 
 }
@@ -212,7 +210,7 @@ function installDependency() {
         info "on '$repository' : '$gitDir' already exist "
         return 0
     fi
-   
+
     mkdir -p "${gitDir}"
     if [[ "$version" = *"SNAPSHOT" ]]; then
         info "repository: ${repository}, projetName: ${projetName}, version: ${version}"
@@ -243,6 +241,8 @@ function installDependency() {
 function installDependencies() {
     local -r prefix="$1"
 
+    debug "prefix: ${prefix}"
+
     downloadDependenciesParentPom "$prefix"
 
     local -a dependencies; dependencies=( "$(getDependencies "$prefix")" )
@@ -256,17 +256,21 @@ function installDependencies() {
         [[ "${CURRENT_ARTIFACT_ID[*]}" == *"${module}"* ]] && continue
         debug "${module} -> ${version}"
         while read -r -d '' pomFile; do
+            debug "pomFile: ${pomFile}"
+            xml2 < "${pomFile}" | grep -q "/project/artifactId=${module}" || continue
             local tmprepo; tmprepo="$(grep -oPm1 "(?<=<connection>scm:git:)[^<]+" < "$pomFile")"
+            debug "tmprepo: ${tmprepo}"
             if [[ -n "$tmprepo" ]]; then
                 repositories+=( "${tmprepo} ${version}" )
             fi
-        done < <(find . -name "*.pom" -exec grep -lHZ "<module>${module}</module>" {} \;) || true
+        done < <(find . -name "*.pom" -not -path "./.m2/*" -print0) || true
     done
 
     IFS=$'\n' repositories=( "$(sort -u <<<"${repositories[*]}")" )
-        
-    debug "repo:
-${repositories[*]}"
+
+    debug "repo: [
+        ${repositories[*]}
+    ]"
     for r in ${repositories[*]}; do
         local -a rr; IFS=' ' read -r -a rr <<< "$r"
         installDependency "${rr[@]}"
