@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>fr.irun</groupId>
+        <groupId>fr.ght1pc9kc</groupId>
         <artifactId>testy-box</artifactId>
         <version>1.5.0-SNAPSHOT</version>
     </parent>
@@ -13,7 +13,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>fr.irun</groupId>
+            <groupId>fr.ght1pc9kc</groupId>
             <artifactId>testy-core-box</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -34,17 +34,19 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+        </dependency>
 
         <!--SQL-->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>

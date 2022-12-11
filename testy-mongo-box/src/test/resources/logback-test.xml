@@ -10,7 +10,7 @@
         <appender-ref ref="STDOUT"/>
     </root>
     <!--<logger name="de.flapdoodle.embed" level="WARN"/>-->
-    <!--<logger name="com.irun.nora.test.mongo" level="INFO"/>-->
+    <!--<logger name="com.ght1pc9kc.nora.test.mongo" level="INFO"/>-->
     <logger name="reactor.Mono" level="info" additivity="false">
         <appender-ref ref="STDOUT"/>
     </logger>
