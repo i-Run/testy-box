@@ -299,7 +299,7 @@
         <profile>
             <id>sonar</id>
             <properties>
-                <sonar.projectKey>Marthym_scraphead</sonar.projectKey>
+                <sonar.projectKey>Marthym_testy-box</sonar.projectKey>
                 <sonar.organization>ght1pc9kc-fr</sonar.organization>
                 <sonar.host.url>https://sonarcloud.io</sonar.host.url>
                 <sonar.moduleKey>${project.groupId}:${project.artifactId}</sonar.moduleKey>
@@ -307,7 +307,6 @@
                 <sonar.coverage.exclusions>**/*.html</sonar.coverage.exclusions>
                 <sonar.exclusions>**/*.html</sonar.exclusions>
                 <sonar.java.binaries>${project.build.directory}/classes</sonar.java.binaries>
-                <sonar.java.libraries>${project.build.directory}/dependency</sonar.java.libraries>
             </properties>
 
             <build>
