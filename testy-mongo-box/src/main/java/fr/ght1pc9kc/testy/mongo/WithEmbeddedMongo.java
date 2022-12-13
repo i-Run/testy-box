@@ -5,7 +5,13 @@ import com.mongodb.reactivestreams.client.MongoClients;
 import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.mongo.transitions.Mongod;
 import de.flapdoodle.embed.mongo.transitions.RunningMongodProcess;
-import de.flapdoodle.reverse.TransitionWalker;
+import de.flapdoodle.embed.process.distribution.Distribution;
+import de.flapdoodle.embed.process.io.ProcessOutput;
+import de.flapdoodle.os.Platform;
+import de.flapdoodle.os.linux.DebianVersion;
+import de.flapdoodle.os.linux.LinuxDistribution;
+import de.flapdoodle.reverse.transitions.Start;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -14,8 +20,6 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory;
@@ -36,12 +40,11 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @see <a href="https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo">flapdoodle</a>
  */
+@Slf4j
 public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, ParameterResolver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(WithEmbeddedMongo.class);
-
     private static final Namespace NAMESPACE = Namespace.create(WithEmbeddedMongo.class);
 
-    private static final String P_MONGO_RUNNING = "mongoRunning";
+    private static final String P_MONGO_PROCESS = "mongoPocess";
     private static final String P_MONGO_CLIENT = "mongoClient";
     private static final String P_MONGO_FACTORY = "reactiveMongoFactory";
     private static final String P_MONGO_TEMPLATE = "reactiveMongoTemplate";
@@ -79,11 +82,27 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
 
     @Override
     public void beforeAll(ExtensionContext context) throws IOException {
-        TransitionWalker.ReachedState<RunningMongodProcess> running = Mongod.instance().start(Version.Main.V6_0);
+        Platform platform = Platform.detect();
+        platform.distribution().ifPresent(distrib -> {
+            //FIXME: #437 Override Debian Testing Version
+            if (LinuxDistribution.Debian.equals(distrib) && platform.version().isEmpty()) {
+                String override = String.format("%s|%s|%s|%s",
+                        platform.operatingSystem(), platform.architecture(), distrib,
+                        platform.version()
+                                .orElseGet(() -> distrib.versions().get(0)));
+                log.debug("Override platform string: {}", override);
+                System.setProperty("de.flapdoodle.os.override", override);
+            }
+        });
+
+        RunningMongodProcess process = Mongod.instance()
+                .withProcessOutput(Start.to(ProcessOutput.class)
+                        .initializedWith(ProcessOutput.named("Slf4j Logger", log)))
+                .start(Version.Main.V6_0).current();
 
         MongoClient mongo = MongoClients.create(String.format("mongodb://%s:%d/%s",
-                running.current().getServerAddress().getHost(),
-                running.current().getServerAddress().getPort(),
+                process.getServerAddress().getHost(),
+                process.getServerAddress().getPort(),
                 databaseName));
 
         ReactiveMongoDatabaseFactory mongoFactory = new SimpleReactiveMongoDatabaseFactory(mongo, databaseName);
@@ -94,14 +113,13 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
 
         Store store = getStore(context);
         store.put(P_MONGO_DB_NAME, databaseName);
-        store.put(P_MONGO_RUNNING, running);
+        store.put(P_MONGO_PROCESS, process);
         store.put(P_MONGO_CLIENT, mongo);
         store.put(P_MONGO_FACTORY, mongoFactory);
         store.put(P_MONGO_TEMPLATE, mongoTemplate);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void afterAll(ExtensionContext context) {
         Store store = getStore(context);
         MongoClient mongo = store.get(P_MONGO_CLIENT, MongoClient.class);
@@ -109,9 +127,9 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
             mongo.close();
         }
 
-        TransitionWalker.ReachedState<RunningMongodProcess> running = store.get(P_MONGO_RUNNING, TransitionWalker.ReachedState.class);
+        RunningMongodProcess running = store.get(P_MONGO_PROCESS, RunningMongodProcess.class);
         if (running != null) {
-            running.close();
+            running.stop();
         }
     }
 
