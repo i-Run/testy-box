@@ -1,7 +1,6 @@
 package fr.ght1pc9kc.testy.jooq;
 
 import fr.ght1pc9kc.testy.jooq.annotations.DbCatalogName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -18,14 +17,13 @@ import static org.assertj.core.api.Assertions.fail;
 @ExtendWith(WithInMemoryDatasource.class)
 class WithInMemoryDatasourceTest {
 
-        @Test
-        void should_extend_with_datasource(DataSource tested, @DbCatalogName String catalog) {
-            assertThat(catalog).isNotNull();
+    @Test
+    void should_extend_with_datasource(DataSource tested, @DbCatalogName String catalog) {
+        assertThat(catalog).isNotNull();
 
-            test_database_aware(tested, catalog);
-        }
+        test_database_aware(tested, catalog);
+    }
 
-    @Nested
     static class WithInMemoryDatasourceRegisterTest {
         static final String CATALOG_NAME = "jedidb";
 

@@ -65,9 +65,7 @@ class WithMultipleDataSourcesTest {
         assertThat(legacyContext).isNotNull();
 
         final Result<Record> actualLegacyResult = legacyContext.fetch(SQL_SELECT_ALL_GUNGANS);
-        assertThat(actualLegacyResult).isNotNull();
-        assertThat(actualLegacyResult).isNotEmpty();
-        assertThat(actualLegacyResult).hasSize(1);
+        assertThat(actualLegacyResult).isNotNull().isNotEmpty().hasSize(1);
 
         final Record actualLegacyRecord = actualLegacyResult.get(0);
         assertThat(actualLegacyRecord).isNotNull();
@@ -86,9 +84,7 @@ class WithMultipleDataSourcesTest {
         assertThat(noraContext).isNotNull();
 
         final Result<Record> actualNoraResult = noraContext.fetch(SQL_SELECT_ALL_MASTERS);
-        assertThat(actualNoraResult).isNotNull();
-        assertThat(actualNoraResult).isNotEmpty();
-        assertThat(actualNoraResult).hasSize(1);
+        assertThat(actualNoraResult).isNotNull().isNotEmpty().hasSize(1);
 
         final Record actualNoraRecord = actualNoraResult.get(0);
         assertThat(actualNoraRecord).isNotNull();
@@ -109,9 +105,7 @@ class WithMultipleDataSourcesTest {
         assertThat(legacyContext).isNotNull();
 
         final Result<Record> actualLegacyResult = legacyContext.fetch(SQL_SELECT_ALL_GUNGANS);
-        assertThat(actualLegacyResult).isNotNull();
-        assertThat(actualLegacyResult).isNotEmpty();
-        assertThat(actualLegacyResult).hasSize(1);
+        assertThat(actualLegacyResult).isNotNull().isNotEmpty().hasSize(1);
 
         final Record actualLegacyRecord = actualLegacyResult.get(0);
         assertThat(actualLegacyRecord).isNotNull();
@@ -125,9 +119,7 @@ class WithMultipleDataSourcesTest {
         assertThat(noraContext).isNotNull();
 
         final Result<Record> actualNoraResult = noraContext.fetch(SQL_SELECT_ALL_MASTERS);
-        assertThat(actualNoraResult).isNotNull();
-        assertThat(actualNoraResult).isNotEmpty();
-        assertThat(actualNoraResult).hasSize(1);
+        assertThat(actualNoraResult).isNotNull().isNotEmpty().hasSize(1);
 
         final Record actualNoraRecord = actualNoraResult.get(0);
         assertThat(actualNoraRecord).isNotNull();

@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Extension allowing to initialize a mongo database with data.
@@ -117,7 +116,7 @@ public final class WithMongoData implements BeforeEachCallback {
     private void fillCollection(ReactiveMongoTemplate mongoDb, ObjectMapper objectMapper, String collectionName, MongoDataSet<?> dataSet) {
         final List<Document> toInsert = dataSet.documents().stream()
                 .map(o -> objectMapper.convertValue(o, Document.class))
-                .collect(Collectors.toList());
+                .toList();
 
         mongoDb.insertAll(Mono.just(toInsert), collectionName).blockLast();
     }

@@ -68,8 +68,7 @@ class DeliveryMappingHelperTest {
         final Delivery delivery = new Delivery(null, null, body);
         final List<TestModel> actual = DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, typeReference);
 
-        assertThat(actual).isNotNull();
-        assertThat(actual).containsExactly(TestModel.OBIWAN, TestModel.ANAKIN);
+        assertThat(actual).isNotNull().containsExactly(TestModel.OBIWAN, TestModel.ANAKIN);
     }
 
     @Test

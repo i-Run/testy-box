@@ -48,8 +48,9 @@ class WithRabbitMockCustomBrokerTest {
         final String actualResponse = AMQPHelper.emitWithReply(request, sender, EXCHANGE_NAME)
                 .map(d -> readDeliveryValue(d, objectMapper, String.class))
                 .block();
-        assertThat(actualResponse).isNotNull();
-        assertThat(actualResponse).isEqualTo(response);
+        assertThat(actualResponse)
+                .isNotNull()
+                .isEqualTo(response);
 
         final Optional<String> actualRequest = receiver.getNextMessage()
                 .map(d -> readDeliveryValue(d, objectMapper, String.class));

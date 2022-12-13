@@ -52,8 +52,8 @@ public final class ChainedExtension implements
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         for (Extension ex : extensions) {
-            if (ex instanceof BeforeAllCallback) {
-                ((BeforeAllCallback) ex).beforeAll(context);
+            if (ex instanceof BeforeAllCallback callback) {
+                callback.beforeAll(context);
             }
         }
     }
@@ -62,8 +62,8 @@ public final class ChainedExtension implements
     public void afterAll(ExtensionContext context) throws Exception {
         for (int i = extensions.length - 1; i >= 0; i--) {
             Extension ex = extensions[i];
-            if (ex instanceof AfterAllCallback) {
-                ((AfterAllCallback) ex).afterAll(context);
+            if (ex instanceof AfterAllCallback callback) {
+                callback.afterAll(context);
             }
         }
     }
@@ -71,8 +71,8 @@ public final class ChainedExtension implements
     @Override
     public void beforeEach(ExtensionContext context) throws Exception {
         for (Extension ex : extensions) {
-            if (ex instanceof BeforeEachCallback) {
-                ((BeforeEachCallback) ex).beforeEach(context);
+            if (ex instanceof BeforeEachCallback callback) {
+                callback.beforeEach(context);
             }
         }
     }
@@ -81,8 +81,8 @@ public final class ChainedExtension implements
     public void afterEach(ExtensionContext context) throws Exception {
         for (int i = extensions.length - 1; i >= 0; i--) {
             Extension ex = extensions[i];
-            if (ex instanceof AfterEachCallback) {
-                ((AfterEachCallback) ex).afterEach(context);
+            if (ex instanceof AfterEachCallback callback) {
+                callback.afterEach(context);
             }
         }
     }
@@ -90,8 +90,8 @@ public final class ChainedExtension implements
     @Override
     public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         for (Extension ex : extensions) {
-            if (ex instanceof ParameterResolver) {
-                boolean isSupported = ((ParameterResolver) ex).supportsParameter(parameterContext, extensionContext);
+            if (ex instanceof ParameterResolver resolver) {
+                boolean isSupported = resolver.supportsParameter(parameterContext, extensionContext);
                 if (isSupported) {
                     return true;
                 }
@@ -107,8 +107,8 @@ public final class ChainedExtension implements
         Exception lastException = null;
         for (Extension ex : extensions) {
             try {
-                if (ex instanceof ParameterResolver) {
-                    param = ((ParameterResolver) ex).resolveParameter(parameterContext, extensionContext);
+                if (ex instanceof ParameterResolver resolver) {
+                    param = resolver.resolveParameter(parameterContext, extensionContext);
                 }
             } catch (Exception e) {
                 lastException = e;
@@ -126,7 +126,7 @@ public final class ChainedExtension implements
     }
 
     public static class ChainedExtensionBuilder {
-        private List<Extension> extensions = new ArrayList<>();
+        private final List<Extension> extensions = new ArrayList<>();
 
         ChainedExtensionBuilder(Extension ex) {
             extensions.add(ex);

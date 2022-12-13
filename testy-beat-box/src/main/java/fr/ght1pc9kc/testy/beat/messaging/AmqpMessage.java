@@ -1,8 +1,9 @@
 package fr.ght1pc9kc.testy.beat.messaging;
 
-import com.google.common.collect.ImmutableMap;
 import lombok.Builder;
 import lombok.Singular;
+
+import java.util.Map;
 
 /**
  * Class wrapping the body and the headers of an AMQP message.
@@ -13,7 +14,7 @@ public final class AmqpMessage {
     public final byte[] body;
 
     @Singular
-    public final ImmutableMap<String, Object> headers;
+    public final Map<String, Object> headers;
 
     /**
      * Create a simple response
@@ -22,7 +23,7 @@ public final class AmqpMessage {
      * @return {@link AmqpMessage}.
      */
     public static AmqpMessage of(byte[] body) {
-        return new AmqpMessage(body, ImmutableMap.of());
+        return new AmqpMessage(body, Map.of());
     }
 
 }

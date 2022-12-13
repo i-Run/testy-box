@@ -28,7 +28,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,7 +81,7 @@ class MockedReceiverTest {
         final int nbRequests = 5;
 
         final List<String> messages = IntStream.range(0, nbRequests)
-                .mapToObj(i -> "test-message-" + i).collect(Collectors.toList());
+                .mapToObj(i -> "test-message-" + i).toList();
 
         final Flux<Delivery> receivedMessage = tested.consume(nbRequests).on(QUEUE).start();
 
@@ -118,7 +117,7 @@ class MockedReceiverTest {
         assertThat(actualResponse.getProperties()).isNotNull();
         final Map<String, Object> actualHeaders = actualResponse.getProperties().getHeaders();
         assertThat(actualHeaders).isNotNull();
-        assertThat(actualHeaders.get(responseHeaderKey)).isEqualTo(responseHeaderValue);
+        assertThat(actualHeaders).containsEntry(responseHeaderKey, responseHeaderValue);
 
         final Delivery actualRequest = receivedMessage.single().block(BLOCK_TIMEOUT);
         assertThat(actualRequest).isNotNull();
