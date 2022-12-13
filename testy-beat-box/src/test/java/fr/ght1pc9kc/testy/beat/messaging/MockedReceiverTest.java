@@ -116,8 +116,8 @@ class MockedReceiverTest {
         assertThat(objectMapper.readValue(actualResponse.getBody(), TestModel.class)).isEqualTo(response);
         assertThat(actualResponse.getProperties()).isNotNull();
         final Map<String, Object> actualHeaders = actualResponse.getProperties().getHeaders();
-        assertThat(actualHeaders).isNotNull();
-        assertThat(actualHeaders).containsEntry(responseHeaderKey, responseHeaderValue);
+        assertThat(actualHeaders).isNotNull()
+                .containsEntry(responseHeaderKey, responseHeaderValue);
 
         final Delivery actualRequest = receivedMessage.single().block(BLOCK_TIMEOUT);
         assertThat(actualRequest).isNotNull();

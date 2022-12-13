@@ -44,8 +44,7 @@ class DeliveryMappingHelperTest {
         final Delivery delivery = new Delivery(null, null, body);
         final TestModel actual = DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, TestModel.class);
 
-        assertThat(actual).isNotNull();
-        assertThat(actual).isEqualTo(TestModel.OBIWAN);
+        assertThat(actual).isNotNull().isEqualTo(TestModel.OBIWAN);
     }
 
     @Test

@@ -23,7 +23,7 @@ import java.util.stream.Stream;
  *
  * @deprecated Removed in version 1.5. Use instead {@link MockedReceiver}, also injectable by Rabbit extension.
  */
-@Deprecated
+@Deprecated(since = "1.4", forRemoval = true)
 public final class AMQPReceiver {
 
     private static final int DEFAULT_QUEUE_CAPACITY = 10;
