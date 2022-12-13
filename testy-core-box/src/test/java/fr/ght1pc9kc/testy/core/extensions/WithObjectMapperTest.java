@@ -22,10 +22,9 @@ class WithObjectMapperTest {
         @Test
         void should_inject_object_mapper(ObjectMapper tested) {
             assertThat(tested.getRegisteredModuleIds()).containsOnly(
-                    "com.fasterxml.jackson.datatype.guava.GuavaModule",
-                    "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+                    "jackson-datatype-jsr310",
                     "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
-                    "com.fasterxml.jackson.module.paramnames.ParameterNamesModule"
+                    "jackson-module-parameter-names"
             );
 
             assertThat(tested.findMixInClassFor(Dummy.class)).isNull();
@@ -46,8 +45,7 @@ class WithObjectMapperTest {
         @Test
         void should_inject_object_mapper(ObjectMapper tested) {
             assertThat(tested.getRegisteredModuleIds()).containsOnly(
-                    "com.fasterxml.jackson.module.paramnames.ParameterNamesModule",
-                    "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule"
+                    "jackson-datatype-jsr310", "jackson-module-parameter-names"
             );
 
             assertThat(tested.findMixInClassFor(Dummy.class))
