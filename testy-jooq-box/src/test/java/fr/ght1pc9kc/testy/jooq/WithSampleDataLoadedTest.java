@@ -8,10 +8,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 class WithSampleDataLoadedTest {
 
-    private static WithInMemoryDatasource wDs = WithInMemoryDatasource.builder().build();
-    private static WithDslContext wDslContext = WithDslContext.builder()
+    private static final WithInMemoryDatasource wDs = WithInMemoryDatasource.builder().build();
+    private static final WithDslContext wDslContext = WithDslContext.builder()
             .setDatasourceExtension(wDs).build();
-    private static WithSampleDataLoaded tested = WithSampleDataLoaded.builder(wDslContext)
+    private static final WithSampleDataLoaded tested = WithSampleDataLoaded.builder(wDslContext)
             .build();
 
     @RegisterExtension

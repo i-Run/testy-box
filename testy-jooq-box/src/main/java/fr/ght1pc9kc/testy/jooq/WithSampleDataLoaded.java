@@ -105,14 +105,13 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
 
     public static class SampleLoaderBuilder {
         private final Extension dslExtension;
-        private final List<? extends UpdatableRecord<?>> records = new ArrayList<>();
+        private final List<UpdatableRecord<?>> records = new ArrayList<>();
 
         SampleLoaderBuilder(Extension dslExtension) {
             this.dslExtension = dslExtension;
         }
 
-        @SuppressWarnings("unchecked")
-        public SampleLoaderBuilder addDataset(RelationalDataSet dataset) {
+        public <T extends UpdatableRecord<T>> SampleLoaderBuilder addDataset(RelationalDataSet<T> dataset) {
             records.addAll(dataset.records());
             return this;
         }
