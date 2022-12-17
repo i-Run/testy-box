@@ -44,7 +44,7 @@
         <lombok.version>1.18.24</lombok.version>
 
         <amqp-client.version>5.16.0</amqp-client.version>
-        <embed-mongo.version>4.2.0</embed-mongo.version>
+        <embed-mongo.version>4.3.3</embed-mongo.version>
         <flyway.version>9.10.0</flyway.version>
         <h2.version>2.1.214</h2.version>
         <jackson.version>2.14.1</jackson.version>

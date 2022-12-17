@@ -5,11 +5,7 @@ import com.mongodb.reactivestreams.client.MongoClients;
 import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.mongo.transitions.Mongod;
 import de.flapdoodle.embed.mongo.transitions.RunningMongodProcess;
-import de.flapdoodle.embed.process.distribution.Distribution;
 import de.flapdoodle.embed.process.io.ProcessOutput;
-import de.flapdoodle.os.Platform;
-import de.flapdoodle.os.linux.DebianVersion;
-import de.flapdoodle.os.linux.LinuxDistribution;
 import de.flapdoodle.reverse.transitions.Start;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -82,18 +78,6 @@ public class WithEmbeddedMongo implements BeforeAllCallback, AfterAllCallback, P
 
     @Override
     public void beforeAll(ExtensionContext context) throws IOException {
-        Platform platform = Platform.detect();
-        platform.distribution().ifPresent(distrib -> {
-            //FIXME: #437 Override Debian Testing Version
-            if (LinuxDistribution.Debian.equals(distrib) && platform.version().isEmpty()) {
-                String override = String.format("%s|%s|%s|%s",
-                        platform.operatingSystem(), platform.architecture(), distrib,
-                        platform.version()
-                                .orElseGet(() -> distrib.versions().get(0)));
-                log.debug("Override platform string: {}", override);
-                System.setProperty("de.flapdoodle.os.override", override);
-            }
-        });
 
         RunningMongodProcess process = Mongod.instance()
                 .withProcessOutput(Start.to(ProcessOutput.class)
