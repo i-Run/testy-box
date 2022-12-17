@@ -6,11 +6,10 @@ import com.rabbitmq.client.Connection;
 import fr.ght1pc9kc.testy.beat.brokers.EmbeddedBroker;
 import fr.ght1pc9kc.testy.beat.brokers.QpidEmbeddedBroker;
 import fr.ght1pc9kc.testy.beat.messaging.AMQPHelper;
-import fr.ght1pc9kc.testy.beat.messaging.AMQPReceiver;
 import fr.ght1pc9kc.testy.beat.messaging.MockedReceiver;
 import fr.ght1pc9kc.testy.beat.messaging.MockedSender;
-import fr.ght1pc9kc.testy.core.extensions.WithObjectMapper;
 import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -25,7 +24,6 @@ import reactor.core.scheduler.Schedulers;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.SenderOptions;
 
-import javax.inject.Named;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,12 +49,11 @@ import static fr.ght1pc9kc.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     private static final String QUEUE_2 = "test-queue-2";
  *     private static final String EXCHANGE_1 = "test-exchange-1";
  *     private static final String EXCHANGE_2 = "test-exchange-2";
- *
+ * {@literal  }
  *     private static final WithObjectMapper withObjectMapper = WithObjectMapper.builder()
  *             .addModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule())
  *             .build();
  *     private static final WithRabbitMock withRabbit = WithRabbitMock.builder()
- *             .withObjectMapper(withObjectMapper)
  *             .declareQueueAndExchange(QUEUE_1, EXCHANGE_1)
  *             .declareQueueAndExchange(QUEUE_2, EXCHANGE_2)
  *             .build();
@@ -82,7 +79,7 @@ import static fr.ght1pc9kc.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *     void should_consume_queue_and_reply_message(MockedSender mockedSender, ObjectMapper objectMapper) {
  *          // Here the tested listener creates a queue and consumes on it.
  *          tested.subscribe();
- *
+ * {@literal  }
  *          final String request = "message sent to tested";
  *          final byte[] requestBody = DeliveryMappingHelper.writeObjectAsByte(request, objectMapper);
  *          final String actualResponse = mockedSender.rpc(AmqpMessage.of(requestBody))
@@ -117,10 +114,10 @@ import static fr.ght1pc9kc.testy.beat.messaging.AMQPHelper.deleteReplyQueue;
  *                  .on("queue")
  *                  .thenRespond(AmqpMessage.of(responseBody))
  *                  .start();
- *
+ * {@literal  }
  *         // Tested method sending a message on the queue
  *         tested.execute();
- *
+ * {@literal  }
  *         final List&lt;String&gt; actualEmittedMessages = receivedMessages
  *                 .map(delivery -&gt; DeliveryMappingHelper.readDeliveryValue(delivery, objectMapper, String.class))
  *                 .collect(Collectors.toList());
@@ -133,7 +130,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     private static final String P_RABBIT_CHANNEL = "rabbit-channel";
     private static final String P_RABBIT_SENDER_OPT = "rabbit-sender-opt";
     private static final String P_RABBIT_RECEIVER_OPT = "rabbit-receiver-opt";
-    private static final String P_RABBIT_AMQP_RECEIVER_PREFIX = "rabbit-amqp-receiver-";
     private static final String P_MOCKED_RECEIVER_PREFIX = "rabbit-mocked-receiver";
     private static final String P_MOCKED_SENDER_PREFIX = "rabbit-mocked-sender";
 
@@ -141,14 +137,11 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
 
     private final EmbeddedBroker embeddedBroker;
     private final Map<String, String> queuesAndExchanges;
-    private final @Nullable WithObjectMapper withObjectMapper;
 
     private WithRabbitMock(EmbeddedBroker embeddedBroker,
-                           Map<String, String> queuesAndExchanges,
-                           @Nullable WithObjectMapper withObjectMapper) {
+                           Map<String, String> queuesAndExchanges) {
         this.embeddedBroker = embeddedBroker;
         this.queuesAndExchanges = queuesAndExchanges;
-        this.withObjectMapper = withObjectMapper;
     }
 
     public static WithRabbitMockBuilder builder() {
@@ -188,30 +181,19 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         Connection conn = getRabbitConnection(context);
         Channel channel = conn.createChannel();
 
-        final ObjectMapper objectMapper = Optional.ofNullable(withObjectMapper)
-                .map(wom -> wom.getObjectMapper(context))
-                .orElseGet(ObjectMapper::new);
-
         AMQPHelper.declareReplyQueue(channel);
 
         queuesAndExchanges.forEach((queue, exchange) -> {
-            final AMQPReceiver receiver = buildReceiverForQueue(channel, objectMapper, queue, exchange);
-            store.put(P_RABBIT_AMQP_RECEIVER_PREFIX + queue, receiver);
+            try {
+                declareAndBindQueues(channel, queue, exchange);
+            } catch (IOException e) {
+                Assertions.fail(e);
+            }
         });
+
         store.put(P_RABBIT_CHANNEL, channel);
         store.put(P_MOCKED_RECEIVER_PREFIX, new MockedReceiver(channel));
         store.put(P_MOCKED_SENDER_PREFIX, new MockedSender(channel));
-    }
-
-    private AMQPReceiver buildReceiverForQueue(Channel channel, ObjectMapper objectMapper, String queue, String exchange) {
-        try {
-            declareAndBindQueues(channel, queue, exchange);
-            return AMQPReceiver.builder(queue)
-                    .objectMapper(objectMapper)
-                    .build(channel);
-        } catch (IOException e) {
-            throw new IllegalStateException("Error when declaring queue " + queue, e);
-        }
     }
 
     @Override
@@ -234,7 +216,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
                 || aClass.equals(Channel.class)
                 || aClass.equals(SenderOptions.class)
                 || aClass.equals(ReceiverOptions.class)
-                || aClass.equals(AMQPReceiver.class)
                 || aClass.equals(MockedReceiver.class)
                 || aClass.equals(MockedSender.class);
     }
@@ -254,10 +235,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         if (ReceiverOptions.class.equals(aClass)) {
             return getReceiverOptions(extensionContext);
         }
-        if (AMQPReceiver.class.equals(aClass)) {
-            final String queueName = getQueueNameForParameter(parameterContext);
-            return getReceiver(extensionContext, queueName);
-        }
         if (MockedReceiver.class.equals(aClass)) {
             return getMockedReceiver(extensionContext);
         }
@@ -265,21 +242,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
             return getMockedSender(extensionContext);
         }
         throw new ParameterResolutionException("Unable to resolve parameter for Rabbit Channel !");
-    }
-
-    private String getQueueNameForParameter(ParameterContext parameterContext) {
-        final String queueFromAnnotation = parameterContext.findAnnotation(Named.class)
-                .map(Named::value)
-                .orElse(null);
-
-        if (queueFromAnnotation == null) {
-            if (queuesAndExchanges.size() == 1) {
-                return queuesAndExchanges.keySet().iterator().next();
-            }
-            throw new ParameterResolutionException("Unable to get the queue name for parameter " + AMQPReceiver.class
-                    + " - use annotation " + Named.class.getName() + " to provide it");
-        }
-        return queueFromAnnotation;
     }
 
     private Store getStore(ExtensionContext context) {
@@ -327,20 +289,21 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
     }
 
     /**
-     * Obtain an {@link AMQPReceiver} for the given queue.
+     * Obtain the {@link MockedReceiver} to manage queue receiving messages
      *
-     * @param context   The extension context to get objects from the store.
-     * @param queueName Name of the queue to get the related receiver.
-     * @return {@link AMQPReceiver} related to the given queue.
+     * @param context The extension context to get objects from the store.
+     * @return The {@link MockedReceiver}
      */
-    public AMQPReceiver getReceiver(ExtensionContext context, String queueName) {
-        return getStore(context).get(P_RABBIT_AMQP_RECEIVER_PREFIX + queueName, AMQPReceiver.class);
-    }
-
     private MockedReceiver getMockedReceiver(ExtensionContext context) {
         return getStore(context).get(P_MOCKED_RECEIVER_PREFIX, MockedReceiver.class);
     }
 
+    /**
+     * Obtain the {@link MockedSender} to send messages on mocked queue.
+     *
+     * @param context The extension context to get objects from the store.
+     * @return The {@link MockedSender}
+     */
     private MockedSender getMockedSender(ExtensionContext context) {
         return getStore(context).get(P_MOCKED_SENDER_PREFIX, MockedSender.class);
     }
@@ -349,12 +312,8 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
      * Allow to build a Channel rabbit
      */
     public static class WithRabbitMockBuilder {
-
         private final Map<String, String> queuesAndExchanges = new HashMap<>();
-        @Nullable
-        private WithObjectMapper withObjectMapper;
-        @Nullable
-        private EmbeddedBroker embeddedBroker;
+        private @Nullable EmbeddedBroker embeddedBroker;
 
         /**
          * Define a customized embedded broker.
@@ -381,17 +340,6 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
         }
 
         /**
-         * Declare an object mapper to convert body to objects.
-         *
-         * @param withObjectMapper The {@link WithObjectMapper} extension.
-         * @return Builder instance.
-         */
-        public WithRabbitMockBuilder withObjectMapper(WithObjectMapper withObjectMapper) {
-            this.withObjectMapper = withObjectMapper;
-            return this;
-        }
-
-        /**
          * Build the Rabbit Mock junit extension
          *
          * @return The extension
@@ -400,7 +348,7 @@ public final class WithRabbitMock implements BeforeAllCallback, AfterAllCallback
             final EmbeddedBroker broker = Optional.ofNullable(this.embeddedBroker)
                     .orElseGet(QpidEmbeddedBroker::new);
 
-            return new WithRabbitMock(broker, Map.copyOf(queuesAndExchanges), withObjectMapper);
+            return new WithRabbitMock(broker, Map.copyOf(queuesAndExchanges));
         }
     }
 }

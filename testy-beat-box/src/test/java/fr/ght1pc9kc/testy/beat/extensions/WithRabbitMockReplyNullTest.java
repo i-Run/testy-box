@@ -1,15 +1,18 @@
 package fr.ght1pc9kc.testy.beat.extensions;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rabbitmq.client.Delivery;
 import fr.ght1pc9kc.testy.beat.messaging.AMQPHelper;
-import fr.ght1pc9kc.testy.beat.messaging.AMQPReceiver;
+import fr.ght1pc9kc.testy.beat.messaging.AmqpMessage;
+import fr.ght1pc9kc.testy.beat.messaging.MockedReceiver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import reactor.core.publisher.Flux;
 import reactor.rabbitmq.SenderOptions;
 import reactor.test.StepVerifier;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import static fr.ght1pc9kc.testy.beat.utils.DeliveryMappingHelper.readDeliveryValue;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,16 +32,18 @@ class WithRabbitMockReplyNullTest {
             .build();
 
     @Test
-    void should_emit_and_reply_null(SenderOptions senderOptions, AMQPReceiver receiver) {
-        receiver.consumeAndReply(null);
+    void should_emit_and_reply_null(SenderOptions senderOptions, MockedReceiver receiver) throws JsonProcessingException {
+        Flux<Delivery> actual = receiver.consumeOne().on(QUEUE_NAME)
+                .thenRespond(AmqpMessage.of(OBJECT_MAPPER.writeValueAsBytes(null)))
+                .start();
 
         StepVerifier.create(AMQPHelper.emitWithReply(MESSAGE_TO_SEND, senderOptions, EXCHANGE_NAME))
                 .expectNextMatches(delivery -> Objects.isNull(readDeliveryValue(delivery, OBJECT_MAPPER, String.class)))
                 .expectComplete()
                 .verify();
 
-        final Optional<String> actualMessage = receiver.getNextMessage()
-                .map(d -> readDeliveryValue(d, OBJECT_MAPPER, String.class));
-        assertThat(actualMessage).contains(MESSAGE_TO_SEND);
+        StepVerifier.create(actual.map(d -> readDeliveryValue(d, OBJECT_MAPPER, String.class)))
+                .assertNext(message -> assertThat(message).contains(MESSAGE_TO_SEND))
+                .verifyComplete();
     }
 }

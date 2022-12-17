@@ -42,7 +42,6 @@ class MockedReceiverTest {
             .addModule(new ParameterNamesModule())
             .build();
     private static final WithRabbitMock wRabbitMock = WithRabbitMock.builder()
-            .withObjectMapper(wObjectMapper)
             .declareQueueAndExchange(QUEUE, EXCHANGE)
             .build();
 

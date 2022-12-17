@@ -9,7 +9,7 @@ import fr.ght1pc9kc.testy.beat.extensions.WithRabbitMock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.Sinks;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -91,7 +91,7 @@ class MockedSenderTest {
         static final String RESPONSE = "test-response";
 
         private final AtomicBoolean hasRequest = new AtomicBoolean();
-        private final MonoProcessor<Delivery> request = MonoProcessor.create();
+        private final Sinks.One<Delivery> request = Sinks.one();
 
         public TestConsumer(Channel channel) {
             super(channel);
@@ -100,7 +100,7 @@ class MockedSenderTest {
         @Override
         public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
             if (!hasRequest.getAndSet(true)) {
-                request.onNext(new Delivery(envelope, properties, body));
+                request.tryEmitValue(new Delivery(envelope, properties, body));
 
                 if (properties.getCorrelationId() != null && properties.getReplyTo() != null) {
                     final AMQP.BasicProperties responseProperties = new AMQP.BasicProperties.Builder()
@@ -113,7 +113,7 @@ class MockedSenderTest {
         }
 
         Mono<Delivery> getRequest() {
-            return request;
+            return request.asMono();
         }
     }
 
