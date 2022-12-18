@@ -2,8 +2,6 @@ package fr.ght1pc9kc.testy.jooq;
 
 import fr.ght1pc9kc.testy.jooq.model.RelationalDataSet;
 import org.jooq.DSLContext;
-import org.jooq.Query;
-import org.jooq.TableRecord;
 import org.jooq.UpdatableRecord;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -15,7 +13,6 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 
 import javax.inject.Named;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -30,7 +27,7 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
 
     private WithSampleDataLoaded(Extension wDsl, List<? extends UpdatableRecord<?>> records) {
         this.wDsl = (WithDslContext) wDsl;
-        this.records = records;
+        this.records = List.copyOf(records);
     }
 
     @Override
@@ -56,12 +53,11 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
         DSLContext dslContext = wDsl.getDslContext(context);
         dslContext.transaction(tx -> {
             DSLContext txDsl = DSL.using(tx);
-            List<? extends UpdatableRecord<?>> updatableRecords = records.subList(0, records.size());
-            Collections.reverse(updatableRecords);
-            updatableRecords.stream()
-                    .map(TableRecord::getTable).distinct()
-                    .map(txDsl::delete)
-                    .forEach(Query::execute);
+
+            var it = records.listIterator(records.size());
+            while (it.hasPrevious()) {
+                txDsl.delete(it.previous().getTable()).execute();
+            }
             records.forEach(r -> r.changed(true));
             txDsl.batchInsert(records).execute();
         });

@@ -61,7 +61,10 @@
         <mockito.version>4.9.0</mockito.version>
         <reactor.version>3.5.0</reactor.version>
 
+        <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
+        <flyway-maven-plugin.version>9.10.1</flyway-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.8</jacoco-maven-plugin.version>
+        <jooq-codegen-maven.version>3.17.6</jooq-codegen-maven.version>
         <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
         <maven-dependency-plugin.version>3.3.0</maven-dependency-plugin.version>
         <maven-deploy-plugin.version>3.0.0</maven-deploy-plugin.version>
@@ -168,18 +171,17 @@
                 <artifactId>mongodb-driver-reactivestreams</artifactId>
                 <version>${mongo.version}</version>
             </dependency>
+            <dependency>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+                <version>${java-inject.version}</version>
+            </dependency>
 
             <!-- PROVIDED -->
             <dependency>
                 <groupId>org.jetbrains</groupId>
                 <artifactId>annotations</artifactId>
                 <version>${jetbrains.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>javax.inject</groupId>
-                <artifactId>javax.inject</artifactId>
-                <version>${java-inject.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
@@ -293,6 +295,21 @@
                             --illegal-access=permit
                         </argLine>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.flywaydb</groupId>
+                    <artifactId>flyway-maven-plugin</artifactId>
+                    <version>${flyway-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jooq</groupId>
+                    <artifactId>jooq-codegen-maven</artifactId>
+                    <version>${jooq-codegen-maven.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>${build-helper-maven-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

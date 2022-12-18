@@ -29,17 +29,12 @@ class WithDatabaseLoadedTest {
 
     @Test
     void should_get_data_form_loaded_db(DataSource ds) throws SQLException {
-        List<String> actuals = new ArrayList<>();
+        int actual = 0;
         try (Connection conn = ds.getConnection();
              Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("SELECT * FROM JEDI");
-
-            while (rs.next()) {
-                actuals.add(rs.getString(1) + " " + rs.getString(2));
-            }
-            rs.close();
+            actual = stmt.executeUpdate("INSERT INTO JEDI VALUES ( 'LUKE', 'Skywalker', 'LIGHT' )");
         }
 
-        assertThat(actuals).contains("Obiwan Kenobi", "Dark Vador");
+        assertThat(actual).isOne();
     }
 }
