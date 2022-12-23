@@ -18,8 +18,8 @@
 
 This project provides common extensions:
 
-* [WithObjectMapper]() configures a [Jackson](https://github.com/FasterXML/jackson) mapper for Java to JSON conversion.
-* [ChainedExtension]() registers other test extensions and initializes them in the order of the declaration.
+* [WithObjectMapper](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/core/extensions/WithObjectMapper.html) configures a [Jackson](https://github.com/FasterXML/jackson) mapper for Java to JSON conversion.
+* [ChainedExtension](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/core/extensions/ChainedExtension.html) registers other test extensions and initializes them in the order of the declaration.
 
 ### WithObjectMapper
 
@@ -75,10 +75,10 @@ static final ChainedExtension chain = ChainedExtension
 This project is used to test SQL repositorites.
 It provides extensions to load an in-memory H2 database, execute SQL scripts with [Flyway](https://flywaydb.org) and insert test data.
 
-* [WithInMemoryDatasource]() loads a H2 SQL database in-memory on a named catalog.
-* [WithDatabaseLoaded]() creates the database schema on the catalog using [Flyway](https://flywaydb.org) SQL scripts.
-* [WithDslContext]() creates JOOQ `DSLContext` from the input DataSource.
-* [WithSampleDataLoaded]() reset the content of the tables before each test using JOOQ records.
+* [WithInMemoryDatasource](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/jooq/WithInMemoryDatasource.html) loads a H2 SQL database in-memory on a named catalog.
+* [WithDatabaseLoaded](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/jooq/WithDatabaseLoaded.html) creates the database schema on the catalog using [Flyway](https://flywaydb.org) SQL scripts.
+* [WithDslContext](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/jooq/WithDslContext.html) creates JOOQ `DSLContext` from the input DataSource.
+* [WithSampleDataLoaded](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/jooq/WithSampleDataLoaded.html) reset the content of the tables before each test using JOOQ records.
 
 ### WithInMemoryDatasource
 
@@ -131,7 +131,7 @@ void setUp(@Named("my_catalog_1") DataSource dataSource1,
 
 ### WithDatabaseLoaded
 
-This extension depends on a [DatasourceExtension]() and runs a [Flyway](https://flywaydb.org/) migration on the related DB catalog.
+This extension depends on a [DatasourceExtension](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/jooq/DatasourceExtension.html) and runs a [Flyway](https://flywaydb.org/) migration on the related DB catalog.
 
 By default, the SQL scripts have to be located  into `db.migration.<catalog>` in the classpath, where `<catalog>` is the name of DataSource catalog. The names of the SQL files shall match [Flyway naming convention](https://flywaydb.org/documentation/migrations#naming).
 
@@ -158,7 +158,7 @@ static final ChainedExtension chain = ChainedExtension
 
 ### WithDslContext
 
-This extension depends on a [DatasourceExtension]() and creates a [JOOQ DSLContext](https://www.jooq.org/doc/3.13/manual/sql-building/dsl-context/) on the related DataSource.
+This extension depends on a [DatasourceExtension](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/jooq/DatasourceExtension.html) and creates a [JOOQ DSLContext](https://www.jooq.org/doc/3.13/manual/sql-building/dsl-context/) on the related DataSource.
 
 ```java
     private static final WithInMemoryDatasource wDataSource = WithInMemoryDatasource
@@ -200,7 +200,7 @@ void setUp(@Named("my_catalog_1") DSLContext dsl1,
 
 This extension deletes and inserts test data **before each test method**.
 
-The test data are inserted as JOOQ records. They can be defined with classes implementing [RelationalDataSet]()
+The test data are inserted as JOOQ records. They can be defined with classes implementing [RelationalDataSet](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/jooq/model/RelationalDataSet.html)
 
 ```java
 public final class MyElementDataSet implements RelationalDataSet<MyElementRecord> {
@@ -248,8 +248,8 @@ static final ChainedExtension chain = ChainedExtension
 
 This project is used to test MongoDB repositories. It provides extensions to use an embedded Mongo database:
 
-* [WithEmbeddedMongo]() initializes the embbeded Mongo database.
-* [WithMongoData]() inserts test data into the database.
+* [WithEmbeddedMongo](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/mongo/WithEmbeddedMongo.html) initializes the embbeded Mongo database.
+* [WithMongoData](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/mongo/WithMongoData.html) inserts test data into the database.
 
 ### WithEmbeddedMongo
 
@@ -276,7 +276,7 @@ void setUp(MongoClient mongoClient,
 
 ### WithMongoData
 
-This extension resets the content of the collections before each test method. The data of a collection can be defined by implementing [MongoDataSet]().
+This extension resets the content of the collections before each test method. The data of a collection can be defined by implementing [MongoDataSet](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/mongo/MongoDataSet.html).
 
 ```java
 public class MyElementDataSet implements MongoDataSet<MyElement> {
@@ -306,7 +306,7 @@ static final ChainedExtension wExtensions = ChainedExtension
         .register();
 ```
 
-Optionally, a specific mapper can be used to convert objects to Mongo Documents by including the extension [WithObjectMapper]().
+Optionally, a specific mapper can be used to convert objects to Mongo Documents by including the extension [WithObjectMapper](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/core/extensions/WithObjectMapper.html).
 
 ```java
 private static final WithEmbeddedMongo wMongo = WithEmbeddedMongo
@@ -334,7 +334,7 @@ static final ChainedExtension wExtensions = ChainedExtension
 
 This project is used to test classes using RabbitMQ. It provides an extension to run an embedded AMQP broker.
 
-* [WithRabbitMock]() runs an embedded AMQP broker.
+* [WithRabbitMock](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/beat/extensions/WithRabbitMock.html) runs an embedded AMQP broker.
 
 ### WithRabbitMock
 
@@ -384,10 +384,10 @@ The queues are deleted automatically by closing the connection after each test m
 
 In order to simplify mocking of rabbit queues, Mocked sender and receiver can be injected to the test:
 
-- [MockedSender]()
-- [MockedReceiver]()
+- [MockedSender](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/beat/messaging/MockedSender.html)
+- [MockedReceiver](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/beat/messaging/MockedReceiver.html)
 
-These mocks use [AmqpMessage]() as requests/responses. **AmqpMessage** can define the body and the headers of the message.
+These mocks use [AmqpMessage](https://marthym.github.io/testy-box/fr/ght1pc9kc/testy/beat/messaging/AmqpMessage.html) as requests/responses. **AmqpMessage** can define the body and the headers of the message.
 
 ```java
 @RegisterExtension
