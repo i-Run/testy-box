@@ -2,6 +2,9 @@ package fr.ght1pc9kc.testy.jooq;
 
 import fr.ght1pc9kc.testy.jooq.model.RelationalDataSet;
 import org.jooq.DSLContext;
+import org.jooq.Key;
+import org.jooq.Query;
+import org.jooq.TableRecord;
 import org.jooq.UpdatableRecord;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -16,18 +19,66 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * This extension allows you to load test data into a previously created database.
+ * <p>
+ * These data are imported as a list of jOOQ records. The records are inserted in the same order they have been added
+ * to the extension in order to consider the external key constraints.
+ * <p>
+ * It is possible to insert data in an empty database thanks to the createTablesIfNotExists option.
+ * <p>
+ * The concerned tables are emptied and reloaded for each test to keep the consistency, however, for performance
+ * reasons, if the data has not been modified during a test, a tracker allows to signal to the extension that it is
+ * not necessary to refresh the data. This can improve test performance significantly.
+ *
+ * <pre><code>
+ * // Declare InMemory database
+ * private static final WithInMemoryDatasource wDs = WithInMemoryDatasource.builder().build();
+ *
+ * // Declare jOOQ DslContext
+ * private static final WithDslContext wDslContext = WithDslContext.builder()
+ *         .setDatasourceExtension(wDs).build();
+ *
+ * // Declare records sample for each used tables
+ * private static final WithSampleDataLoaded wSamples = WithSampleDataLoaded.builder(wDslContext)
+ *         .createTablesIfNotExists()               // Create table if not exist in database
+ *         .addDataset(UsersRecordSamples.SAMPLE)
+ *         .addDataset(UsersRolesSamples.SAMPLE)
+ *         .build();
+ *
+ * // Use ChainedExtension to chain each declared extensions
+ *{@literal @}RegisterExtension
+ * static ChainedExtension chain = ChainedExtension.outer(wDs)
+ *         .append(wDslContext)
+ *         .append(wSamples)
+ *         .register();
+ * </code></pre>
+ *
+ * You can now write your test
+ * <pre><code>
+ *{@literal @}Test
+ * void should_get_raw_news(WithSampleDataLoaded.Tracker tracker) { // Inject the modification tracker
+ *     tracker.skipNextSampleLoad();    // ask for skipping the next sample reload
+ *
+ *     // ...
+ * }
+ * </code></pre>
+ */
 public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
     private static final String P_TRACKER = "sampleTracker_";
 
     private final WithDslContext wDsl;
 
     private final List<? extends UpdatableRecord<?>> records;
+    private final boolean createTables;
 
-    private WithSampleDataLoaded(Extension wDsl, List<? extends UpdatableRecord<?>> records) {
+    private WithSampleDataLoaded(Extension wDsl, List<? extends UpdatableRecord<?>> records, boolean createTables) {
         this.wDsl = (WithDslContext) wDsl;
         this.records = List.copyOf(records);
+        this.createTables = createTables;
     }
 
     @Override
@@ -36,6 +87,18 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
         getStore(context).put(P_TRACKER + catalog, new Tracker());
         DSLContext dslContext = wDsl.getDslContext(context);
         dslContext.attach(records);
+
+        if (createTables) {
+            records.stream()
+                    .map(TableRecord::getTable)
+                    .distinct()
+                    .map(t -> dslContext.createTableIfNotExists(t)
+                            .columns(t.fields())
+                            .primaryKey(Optional.ofNullable(t.getPrimaryKey()).map(Key::getFields).orElse(null))
+                            .constraints(t.getKeys().stream().map(Key::constraint).toList())
+                    )
+                    .forEach(Query::execute);
+        }
     }
 
     @Override
@@ -102,6 +165,7 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
     public static class SampleLoaderBuilder {
         private final Extension dslExtension;
         private final List<UpdatableRecord<?>> records = new ArrayList<>();
+        private boolean createTables = false;
 
         SampleLoaderBuilder(Extension dslExtension) {
             this.dslExtension = dslExtension;
@@ -112,8 +176,25 @@ public final class WithSampleDataLoaded implements BeforeAllCallback, BeforeEach
             return this;
         }
 
+        /**
+         * With this option, the tables corresponding to the sample records will be created if they do not exist.
+         * <p>
+         * This avoids having to load the complete database schema and can speed up the tests significantly.
+         * <p>
+         * However, since the schema is not loaded, not all the data it contains is loaded either,
+         * which can cause unexpected behavior.
+         * <p>
+         * By default, the tables was never created.
+         *
+         * @return the builder instance
+         */
+        public SampleLoaderBuilder createTablesIfNotExists() {
+            this.createTables = true;
+            return this;
+        }
+
         public WithSampleDataLoaded build() {
-            return new WithSampleDataLoaded(dslExtension, records);
+            return new WithSampleDataLoaded(dslExtension, records, createTables);
         }
     }
 
