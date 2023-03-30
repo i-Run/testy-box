@@ -4,7 +4,7 @@
 
     <groupId>fr.ght1pc9kc</groupId>
     <artifactId>testy-box</artifactId>
-    <version>1.6.1</version>
+    <version>1.6.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Testy Box</name>
@@ -21,7 +21,7 @@
         <connection>scm:git:git@git.trenzalor.lo:ght1pc9kc.fr/testy-box.git</connection>
         <developerConnection>scm:git:git@git.trenzalor.lo:ght1pc9kc.fr/testy-box.git</developerConnection>
         <url>https://github.com/Marthym/testy-box</url>
-        <tag>1.6.1</tag>
+        <tag>1.6.0</tag>
     </scm>
 
     <modules>
