@@ -54,7 +54,10 @@ class WithMongoDataTest {
                 .collectList()
                 .block();
 
-        assertThat(actual).containsExactly(DocumentDataSet.DOCUMENT_0, DocumentDataSet.DOCUMENT_1);
+        assertThat(actual).containsExactly(
+                DocumentDataSet.DOCUMENT_0,
+                DocumentDataSet.DOCUMENT_1,
+                DocumentDataSet.DOCUMENT_WITH_MONGO_ID);
     }
 
 }

@@ -115,7 +115,12 @@ public final class WithMongoData implements BeforeEachCallback {
 
     private void fillCollection(ReactiveMongoTemplate mongoDb, ObjectMapper objectMapper, String collectionName, MongoDataSet<?> dataSet) {
         final List<Document> toInsert = dataSet.documents().stream()
-                .map(o -> objectMapper.convertValue(o, Document.class))
+                .map(o -> {
+                    if (o instanceof Document document) {
+                        return document;
+                    }
+                    return objectMapper.convertValue(o, Document.class);
+                })
                 .toList();
 
         mongoDb.insertAll(Mono.just(toInsert), collectionName).blockLast();
