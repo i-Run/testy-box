@@ -46,7 +46,7 @@
         <lombok.version>1.18.30</lombok.version>
 
         <amqp-client.version>5.20.0</amqp-client.version>
-        <embed-mongo.version>4.9.3</embed-mongo.version>
+        <embed-mongo.version>4.10.0</embed-mongo.version>
         <flyway.version>9.22.3</flyway.version>
         <h2.version>2.2.220</h2.version>
         <jackson.version>2.15.3</jackson.version>
@@ -61,7 +61,7 @@
 
         <assertj.version>3.24.2</assertj.version>
         <logback.version>1.4.11</logback.version>
-        <mockito.version>5.6.0</mockito.version>
+        <mockito.version>5.7.0</mockito.version>
 
         <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
         <flyway-maven-plugin.version>9.22.3</flyway-maven-plugin.version>
