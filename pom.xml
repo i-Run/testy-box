@@ -41,43 +41,43 @@
         <maven.compiler.target>17</maven.compiler.target>
 
         <java-inject.version>1</java-inject.version>
-        <jetbrains.version>23.0.0</jetbrains.version>
-        <junit.version>5.9.1</junit.version>
-        <lombok.version>1.18.24</lombok.version>
+        <jetbrains.version>24.0.1</jetbrains.version>
+        <junit.version>5.10.0</junit.version>
+        <lombok.version>1.18.30</lombok.version>
 
-        <amqp-client.version>5.16.0</amqp-client.version>
-        <embed-mongo.version>4.3.3</embed-mongo.version>
-        <flyway.version>9.10.0</flyway.version>
-        <h2.version>2.1.214</h2.version>
-        <jackson.version>2.14.1</jackson.version>
-        <jooq.version>3.17.6</jooq.version>
-        <mongo.version>4.8.1</mongo.version>
-        <qbit.version>9.0.0</qbit.version>
-        <reactor-rabbitmq.version>1.5.5</reactor-rabbitmq.version>
-        <reactor.version>3.5.0</reactor.version>
-        <slf4j.version>2.0.5</slf4j.version>
-        <spring-mongo.version>4.0.0</spring-mongo.version>
+        <amqp-client.version>5.20.0</amqp-client.version>
+        <embed-mongo.version>4.10.0</embed-mongo.version>
+        <flyway.version>9.22.3</flyway.version>
+        <h2.version>2.2.220</h2.version>
+        <jackson.version>2.15.3</jackson.version>
+        <jooq.version>3.18.7</jooq.version>
+        <mongodb-driver.version>4.9.1</mongodb-driver.version>
+        <qbit.version>9.1.0</qbit.version>
+        <reactor-rabbitmq.version>1.5.6</reactor-rabbitmq.version>
+        <reactor.version>3.5.11</reactor.version>
+        <slf4j.version>2.0.9</slf4j.version>
+        <spring-mongo.version>4.1.5</spring-mongo.version>
+        <jakarta-xml-bind.version>4.0.1</jakarta-xml-bind.version>
 
-        <assertj.version>3.23.1</assertj.version>
-        <logback.version>1.4.5</logback.version>
-        <mockito.version>4.9.0</mockito.version>
-        <reactor.version>3.5.0</reactor.version>
+        <assertj.version>3.24.2</assertj.version>
+        <logback.version>1.4.11</logback.version>
+        <mockito.version>5.7.0</mockito.version>
 
-        <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
-        <flyway-maven-plugin.version>9.10.1</flyway-maven-plugin.version>
-        <jacoco-maven-plugin.version>0.8.10</jacoco-maven-plugin.version>
-        <jooq-codegen-maven.version>3.17.6</jooq-codegen-maven.version>
+        <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
+        <flyway-maven-plugin.version>9.22.3</flyway-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.11</jacoco-maven-plugin.version>
+        <jooq-codegen-maven.version>3.18.7</jooq-codegen-maven.version>
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-dependency-plugin.version>3.3.0</maven-dependency-plugin.version>
-        <maven-deploy-plugin.version>3.0.0</maven-deploy-plugin.version>
-        <maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
-        <maven-javadoc-plugin.version>3.4.1</maven-javadoc-plugin.version>
-        <maven-release-plugin.version>3.0.0-M6</maven-release-plugin.version>
+        <maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version>
+        <maven-deploy-plugin.version>3.1.1</maven-deploy-plugin.version>
+        <maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
+        <maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
+        <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-        <maven-scm-api.version>1.13.0</maven-scm-api.version>
-        <maven-scm-provider-gitexe.version>1.13.0</maven-scm-provider-gitexe.version>
-        <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
-        <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
+        <maven-scm-api.version>2.0.1</maven-scm-api.version>
+        <maven-scm-provider-gitexe.version>2.0.1</maven-scm-provider-gitexe.version>
+        <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
+        <maven-surefire-plugin.version>3.2.1</maven-surefire-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
 
         <surefire.argline.opens />
@@ -161,6 +161,12 @@
                 <artifactId>flyway-core</artifactId>
                 <version>${flyway.version}</version>
             </dependency>
+            <dependency>
+                <groupId>jakarta.xml.bind</groupId>
+                <artifactId>jakarta.xml.bind-api</artifactId>
+                <version>${jakarta-xml-bind.version}</version>
+            </dependency>
+
 
             <!--MONGO-->
             <dependency>
@@ -177,7 +183,7 @@
             <dependency>
                 <groupId>org.mongodb</groupId>
                 <artifactId>mongodb-driver-reactivestreams</artifactId>
-                <version>${mongo.version}</version>
+                <version>${mongodb-driver.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.inject</groupId>
