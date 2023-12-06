@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>fr.ght1pc9kc</groupId>
@@ -30,6 +31,7 @@
         <module>testy-mongo-box</module>
         <module>testy-beat-box</module>
         <module>testy-params-box</module>
+        <module>testy-redis-box</module>
     </modules>
 
     <properties>
@@ -47,17 +49,19 @@
 
         <amqp-client.version>5.20.0</amqp-client.version>
         <embed-mongo.version>4.10.0</embed-mongo.version>
+        <embedded-redis.version>1.3.0</embedded-redis.version>
         <flyway.version>9.22.3</flyway.version>
         <h2.version>2.2.220</h2.version>
         <jackson.version>2.15.3</jackson.version>
+        <jakarta-xml-bind.version>4.0.1</jakarta-xml-bind.version>
         <jooq.version>3.18.7</jooq.version>
+        <lettuce.version>6.3.0.RELEASE</lettuce.version>
         <mongodb-driver.version>4.9.1</mongodb-driver.version>
         <qbit.version>9.1.0</qbit.version>
         <reactor-rabbitmq.version>1.5.6</reactor-rabbitmq.version>
         <reactor.version>3.5.11</reactor.version>
         <slf4j.version>2.0.9</slf4j.version>
         <spring-mongo.version>4.1.5</spring-mongo.version>
-        <jakarta-xml-bind.version>4.0.1</jakarta-xml-bind.version>
 
         <assertj.version>3.24.2</assertj.version>
         <logback.version>1.4.11</logback.version>
@@ -80,7 +84,7 @@
         <maven-surefire-plugin.version>3.2.1</maven-surefire-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
 
-        <surefire.argline.opens />
+        <surefire.argline.opens/>
     </properties>
 
     <dependencyManagement>
@@ -191,6 +195,18 @@
                 <version>${java-inject.version}</version>
             </dependency>
 
+            <!-- REDIS-->
+            <dependency>
+                <groupId>com.github.codemonstur</groupId>
+                <artifactId>embedded-redis</artifactId>
+                <version>${embedded-redis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.lettuce</groupId>
+                <artifactId>lettuce-core</artifactId>
+                <version>${lettuce.version}</version>
+            </dependency>
+
             <!-- PROVIDED -->
             <dependency>
                 <groupId>org.jetbrains</groupId>
@@ -290,7 +306,7 @@
                     <configuration>
                         <argLine>${surefire.argline.opens}</argLine>
                         <excludes>
-                            <exclude />
+                            <exclude/>
                         </excludes>
                     </configuration>
                 </plugin>
